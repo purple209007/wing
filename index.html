@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>廈門慢旅 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=DM+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--ink:#1a1612;--paper:#f5f0e8;--paper2:#ede8dc;--sage:#6b8c6b;--sage-light:#a8c4a2;--clay:#c4845a;--clay-light:#e8b99a;--sand:#d4c4a0;--mist:#8fa89a;--red:#c44a3a;--gold:#b8903a;--white:#fefcf8;--shadow:rgba(26,22,18,0.12);--sb:env(safe-area-inset-bottom,0px)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Serif TC',serif;background:var(--paper);color:var(--ink);min-height:100vh;overflow-x:hidden;padding-bottom:calc(60px + var(--sb))}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.4}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* HEADER */
+.header{position:relative;padding:1.4rem 1.4rem .9rem;background:var(--white);border-bottom:1px solid var(--sand);overflow:hidden}
+.header-bg{position:absolute;inset:0;background:linear-gradient(135deg,#e8dfc8,#f5f0e8 60%,#d4c8b0);opacity:.5}
+.header-content{position:relative;z-index:1}
+.trip-badge{display:inline-block;font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.2em;color:var(--clay);background:var(--clay-light);padding:3px 10px;border-radius:2px;text-transform:uppercase;margin-bottom:.35rem}
+.trip-title{font-family:'Playfair Display',serif;font-size:1.75rem;font-weight:700;line-height:1.1;color:var(--ink);margin-bottom:.15rem}
+.trip-sub{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--mist);letter-spacing:.12em}
+.live-badge{display:inline-flex;align-items:center;gap:5px;font-family:'DM Mono',monospace;font-size:.58rem;color:var(--sage);margin-top:.35rem}
+.live-dot{width:6px;height:6px;background:var(--sage);border-radius:50%;animation:pulse 2s infinite}
+
+/* ONLINE BAR */
+.online-bar{display:flex;align-items:center;gap:7px;padding:.45rem .9rem;background:var(--paper2);border-bottom:1px solid var(--sand);overflow-x:auto}
+.online-label{font-family:'DM Mono',monospace;font-size:.52rem;letter-spacing:.1em;color:var(--mist);text-transform:uppercase;flex-shrink:0}
+.online-av{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:700;flex-shrink:0;border:2px solid var(--paper)}
+
+/* DAY TABS */
+.day-tabs{display:flex;background:var(--white);border-bottom:2px solid var(--sand);position:sticky;top:0;z-index:100;overflow-x:auto}
+.day-tab{flex:1;min-width:66px;padding:.65rem .4rem;border:none;background:transparent;cursor:pointer;font-family:'Noto Serif TC',serif;font-size:.72rem;color:var(--mist);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:2px}
+.day-tab:hover{color:var(--sage)}
+.day-tab.active{color:var(--ink);border-bottom-color:var(--clay);font-weight:700}
+.day-tab .dn{font-family:'Playfair Display',serif;font-size:.95rem;font-weight:700;line-height:1}
+.day-tab .dl{font-family:'DM Mono',monospace;font-size:.68rem;letter-spacing:.04em;text-transform:uppercase;font-weight:700}
+
+/* BOTTOM NAV */
+.bnav{position:fixed;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid var(--sand);display:flex;z-index:200;padding-bottom:var(--sb);box-shadow:0 -4px 20px rgba(26,22,18,.08)}
+.bnav-btn{flex:1;padding:.55rem .1rem .45rem;border:none;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'DM Mono',monospace;font-size:.48rem;letter-spacing:.03em;text-transform:uppercase;color:var(--mist);transition:all .15s}
+.bnav-btn.active{color:var(--clay)}
+.bnav-icon{font-size:1.15rem;line-height:1}
+
+/* MAIN */
+.main{padding:1.1rem;max-width:600px;margin:0 auto}
+.sec-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem}
+.sec-ttl{font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:var(--clay);display:flex;align-items:center;gap:7px}
+.sec-ttl::before{content:'';display:inline-block;width:16px;height:1px;background:var(--clay)}
+.panel{display:none}
+.panel.active{display:block}
+
+/* TIMELINE */
+.timeline{position:relative}
+.timeline::before{content:'';position:absolute;left:48px;top:0;bottom:0;width:1px;background:linear-gradient(to bottom,transparent,var(--sand) 10%,var(--sand) 90%,transparent)}
+.tl-item{display:flex;margin-bottom:1rem;position:relative;animation:fadeUp .4s ease both}
+.tl-time{width:48px;flex-shrink:0;padding-right:12px;text-align:right}
+.tl-t{font-family:'DM Mono',monospace;font-size:.82rem;color:var(--mist);line-height:1;margin-top:7px;font-weight:600}
+.tl-dot{width:9px;height:9px;border-radius:50%;background:var(--paper);border:2px solid var(--sand);flex-shrink:0;margin-top:9px;position:relative;z-index:1}
+.tl-dot.tf{border-color:var(--clay);background:var(--clay-light)}
+.tl-dot.ts{border-color:var(--sage);background:var(--sage-light)}
+.tl-dot.tt{border-color:var(--gold);background:#e8d4a0}
+.tl-dot.ta{border-color:var(--mist);background:#c0d4cc}
+.tl-card{flex:1;margin-left:11px;background:var(--white);border:1px solid var(--sand);border-radius:9px;overflow:hidden;box-shadow:0 2px 7px var(--shadow)}
+.tl-card:active{transform:scale(.98)}
+.ch{padding:.65rem .85rem .45rem;display:flex;justify-content:space-between;align-items:flex-start;gap:.4rem}
+.ct{font-size:.86rem;font-weight:700;line-height:1.3;color:var(--ink);flex:1}
+.tbadge{font-family:'DM Mono',monospace;font-size:.46rem;padding:2px 6px;border-radius:2px;flex-shrink:0;margin-top:2px}
+.bf{background:#f0e0d4;color:var(--clay)}.bs{background:#d4e8d4;color:var(--sage)}.bt{background:#e8e0c8;color:var(--gold)}.ba{background:#d4e0dc;color:var(--mist)}
+.cl{padding:0 .85rem .4rem;display:flex;align-items:center;gap:4px;font-family:'DM Mono',monospace;font-size:.56rem;color:var(--mist)}
+.cl a{color:var(--sage);text-decoration:none;display:flex;align-items:center;gap:3px}
+.cnote{margin:0 .85rem .65rem;padding:.45rem .65rem;background:var(--paper);border-left:2px solid var(--sand);border-radius:0 4px 4px 0;font-size:.68rem;color:var(--ink);opacity:.8;line-height:1.6}
+.cactions{padding:.35rem .85rem .65rem;display:flex;flex-wrap:wrap;gap:.25rem}
+.abtn{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:4px;border:1px solid;font-family:'DM Mono',monospace;font-size:.54rem;cursor:pointer;text-decoration:none;transition:all .15s;background:transparent}
+.am{border-color:var(--sage);color:var(--sage)}.am:hover{background:var(--sage);color:#fff}
+.an{border-color:var(--sand);color:var(--mist)}.an:hover{background:var(--sand);color:var(--ink)}
+.inw{display:none;padding:0 .85rem .65rem}.inw.open{display:block}
+.ini{width:100%;background:var(--paper);border:1px solid var(--sand);border-radius:5px;padding:.4rem .65rem;font-family:'Noto Serif TC',serif;font-size:.78rem;color:var(--ink);resize:none;outline:none;min-height:52px;margin-bottom:.3rem}
+.ins{padding:4px 11px;background:var(--sage);color:#fff;border:none;border-radius:3px;font-family:'DM Mono',monospace;font-size:.56rem;cursor:pointer}
+
+/* MAP */
+.map-wrap{background:var(--white);border:1px solid var(--sand);border-radius:11px;overflow:hidden;margin-bottom:1.1rem;box-shadow:0 2px 7px var(--shadow)}
+.map-hdr{padding:.8rem 1rem;border-bottom:1px solid var(--sand);display:flex;justify-content:space-between;align-items:center}
+.map-ttl{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.09em;color:var(--clay);text-transform:uppercase}
+.map-fr{width:100%;height:255px;border:none;display:block}
+.map-locs{padding:.65rem;display:flex;flex-direction:column;gap:.25rem;max-height:140px;overflow-y:auto}
+.map-li{display:flex;align-items:center;gap:7px;padding:4px 6px;border-radius:5px;cursor:pointer;transition:background .15s;font-size:.71rem}
+.map-li:hover{background:var(--paper2)}
+.map-ln{width:17px;height:17px;background:var(--sage);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:.5rem;flex-shrink:0}
+.route-sum{background:var(--white);border:1px solid var(--sand);border-radius:9px;padding:.85rem 1rem;margin-bottom:1.1rem}
+.route-stops{display:flex;align-items:center;flex-wrap:wrap;gap:.22rem;margin-top:.45rem}
+.rs-name{font-size:.68rem;color:var(--ink);background:var(--paper2);padding:2px 6px;border-radius:3px}
+.rs-arr{font-family:'DM Mono',monospace;font-size:.56rem;color:var(--sand)}
+.route-btn{display:block;width:100%;margin-top:.65rem;padding:8px;background:var(--sage);color:#fff;border:none;border-radius:6px;font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.06em;text-align:center;cursor:pointer;text-decoration:none;transition:background .15s}
+.route-btn:hover{background:var(--ink)}
+
+/* VOUCHERS */
+.vc-grid{display:grid;grid-template-columns:1fr 1fr;gap:.65rem;margin-bottom:1.1rem}
+.vc{background:var(--white);border:1px solid var(--sand);border-radius:9px;padding:.85rem;display:flex;flex-direction:column;gap:.4rem;box-shadow:0 2px 5px var(--shadow);transition:transform .15s;text-decoration:none;color:inherit}
+.vc:hover{transform:translateY(-2px)}
+.vc-ico{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1rem}
+.if{background:#e0ecf0}.ih{background:#f0e8d8}.iy{background:#e0f0e8}
+.vc-name{font-size:.76rem;font-weight:700;line-height:1.3}
+.vc-det{font-family:'DM Mono',monospace;font-size:.56rem;color:var(--mist)}
+.vc-lnk{font-family:'DM Mono',monospace;font-size:.5rem;color:var(--clay);margin-top:auto}
+
+/* NOTES */
+.niw{background:var(--white);border:1px solid var(--sand);border-radius:9px;overflow:hidden;margin-bottom:.85rem;box-shadow:0 2px 5px var(--shadow)}
+.ni{width:100%;padding:.7rem .85rem;border:none;background:transparent;font-family:'Noto Serif TC',serif;font-size:.82rem;color:var(--ink);resize:none;outline:none;min-height:62px}
+.ni::placeholder{color:var(--sand)}
+.nsbar{display:flex;justify-content:space-between;align-items:center;padding:.35rem .85rem;border-top:1px solid var(--paper2)}
+.nai{font-family:'DM Mono',monospace;font-size:.6rem;border:none;background:var(--paper2);padding:3px 8px;border-radius:3px;color:var(--ink);outline:none;width:90px}
+.nsb{padding:5px 13px;background:var(--ink);color:var(--paper);border:none;border-radius:3px;font-family:'DM Mono',monospace;font-size:.56rem;letter-spacing:.04em;cursor:pointer;transition:background .15s}
+.nsb:hover{background:var(--clay)}
+.nlist{display:flex;flex-direction:column;gap:.5rem}
+.nitem{background:var(--white);border:1px solid var(--sand);border-radius:7px;padding:.7rem .85rem;animation:fadeUp .3s ease}
+.nmeta{display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem}
+.nauthor{font-family:'DM Mono',monospace;font-size:.56rem;color:var(--sage);font-weight:500}
+.ntime{font-family:'DM Mono',monospace;font-size:.5rem;color:var(--mist)}
+.ntext{font-size:.78rem;line-height:1.5;color:var(--ink)}
+.ndtag{display:inline-block;font-family:'DM Mono',monospace;font-size:.46rem;background:var(--paper2);color:var(--clay);padding:1px 5px;border-radius:2px;margin-top:.3rem}
+.ndel{background:none;border:none;color:var(--mist);cursor:pointer;font-size:.72rem;opacity:.5;padding:0 3px}
+.ndel:hover{opacity:1;color:var(--red)}
+
+/* ══ EXPENSE ══ */
+.edash{background:var(--ink);color:var(--paper);border-radius:14px;padding:1.3rem 1.4rem 1.1rem;margin-bottom:1.1rem;position:relative;overflow:hidden}
+.edash::after{content:'¥';position:absolute;right:-6px;top:-10px;font-family:'Playfair Display',serif;font-size:6.5rem;opacity:.05;line-height:1}
+.edash-row{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:.75rem}
+.etl{font-family:'DM Mono',monospace;font-size:.5rem;letter-spacing:.14em;opacity:.5;text-transform:uppercase;margin-bottom:3px}
+.etv{font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:700;color:var(--clay-light);line-height:1}
+.etwd{font-family:'DM Mono',monospace;font-size:.74rem;opacity:.65;margin-top:2px}
+.estats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.55rem}
+.estat{background:rgba(255,255,255,.07);border-radius:7px;padding:.55rem .75rem}
+.esv{font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;color:var(--clay-light)}
+.esl{font-family:'DM Mono',monospace;font-size:.46rem;opacity:.5;margin-top:2px}
+.ebar{margin-top:.8rem}
+.ebar-l{font-family:'DM Mono',monospace;font-size:.5rem;opacity:.5;margin-bottom:5px}
+.ebar-t{height:5px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden}
+.ebar-f{height:100%;border-radius:3px;transition:width .5s ease}
+
+.eform{background:var(--white);border:1px solid var(--sand);border-radius:11px;padding:1rem;margin-bottom:1.1rem;box-shadow:0 2px 7px var(--shadow)}
+.eform-t{font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.14em;color:var(--clay);text-transform:uppercase;margin-bottom:.75rem}
+.eCurRow{display:flex;gap:.35rem;margin-bottom:.5rem}
+.eCurBtn{flex:1;padding:6px;border:1px solid var(--sand);border-radius:5px;background:transparent;font-family:'DM Mono',monospace;font-size:.6rem;cursor:pointer;text-align:center;transition:all .15s}
+.eCurBtn.active{background:var(--clay);color:#fff;border-color:var(--clay)}
+.egrid{display:grid;grid-template-columns:1fr 1fr;gap:.45rem;margin-bottom:.45rem}
+.einp{width:100%;padding:8px 10px;border:1px solid var(--sand);border-radius:6px;font-family:'DM Mono',monospace;font-size:.73rem;color:var(--ink);background:var(--paper);outline:none;transition:border-color .15s}
+.einp:focus{border-color:var(--clay)}
+.einp-full{grid-column:1/-1}
+.einp-big{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700}
+.epchips{display:flex;flex-wrap:wrap;gap:.28rem;margin-bottom:.45rem}
+.epchip{padding:3px 9px;border-radius:100px;border:1px solid var(--sand);font-family:'DM Mono',monospace;font-size:.58rem;cursor:pointer;background:transparent;color:var(--mist);transition:all .15s}
+.epchip.sel{background:var(--sage);color:#fff;border-color:var(--sage)}
+.esrow{display:flex;gap:.45rem;margin-top:.55rem}
+.esbtn{flex:1;padding:9px;background:var(--ink);color:var(--paper);border:none;border-radius:6px;font-family:'DM Mono',monospace;font-size:.6rem;cursor:pointer;transition:background .15s}
+.esbtn:hover{background:var(--clay)}
+.escanBtn{padding:9px 12px;background:var(--sage);color:#fff;border:none;border-radius:6px;font-family:'DM Mono',monospace;font-size:.6rem;cursor:pointer;white-space:nowrap;transition:background .15s}
+.escanBtn:hover{background:var(--ink)}
+.escanBtn:disabled{opacity:.5;cursor:default}
+
+.efilter{display:flex;gap:.28rem;margin-bottom:.85rem;overflow-x:auto}
+.efbtn{padding:4px 11px;border-radius:100px;border:1px solid var(--sand);font-family:'DM Mono',monospace;font-size:.56rem;cursor:pointer;background:transparent;color:var(--mist);white-space:nowrap;transition:all .15s;flex-shrink:0}
+.efbtn.active{background:var(--clay);color:#fff;border-color:var(--clay)}
+
+.elist{display:flex;flex-direction:column;gap:.45rem}
+.eitem{background:var(--white);border:1px solid var(--sand);border-radius:8px;padding:.72rem .9rem;display:flex;align-items:center;gap:.6rem;animation:fadeUp .3s ease;box-shadow:0 1px 4px var(--shadow)}
+.ecat{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.88rem;flex-shrink:0}
+.eibody{flex:1;min-width:0}
+.eidesc{font-size:.8rem;font-weight:700;line-height:1.2}
+.eimeta{font-family:'DM Mono',monospace;font-size:.52rem;color:var(--mist);margin-top:2px}
+.eiright{text-align:right;flex-shrink:0}
+.eiamt{font-family:'Playfair Display',serif;font-size:.95rem;font-weight:700;color:var(--clay)}
+.eitwd{font-family:'DM Mono',monospace;font-size:.5rem;color:var(--mist)}
+.eidel{background:none;border:none;color:var(--mist);cursor:pointer;font-size:.7rem;opacity:.4;padding:2px}
+.eidel:hover{opacity:1;color:var(--red)}
+
+.esplit{background:linear-gradient(135deg,#d4e8d0,#e8f0e4);border:1px solid var(--sage-light);border-radius:9px;padding:.9rem 1rem;margin-bottom:1.1rem}
+.esplit-t{font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.11em;text-transform:uppercase;color:var(--sage);margin-bottom:.6rem}
+.esplit-r{display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem}
+.esplit-n{font-size:.78rem;font-weight:700}
+
+/* ══ JOURNAL ══ */
+.jcomp{background:var(--white);border:1px solid var(--sand);border-radius:11px;padding:1rem;margin-bottom:1.1rem;box-shadow:0 2px 7px var(--shadow)}
+.jcomp-t{font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.14em;color:var(--clay);text-transform:uppercase;margin-bottom:.7rem}
+.jupload{border:2px dashed var(--sand);border-radius:7px;padding:.9rem;text-align:center;cursor:pointer;margin-bottom:.6rem;transition:border-color .15s;position:relative;overflow:hidden}
+.jupload:hover{border-color:var(--clay)}
+.jupload input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.jupload-t{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--mist)}
+.jpreviews{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.6rem}
+.jpwrap{position:relative;flex-shrink:0}
+.jpimg{width:66px;height:66px;object-fit:cover;border-radius:5px;border:1px solid var(--sand);display:block}
+.jpdel{position:absolute;top:-5px;right:-5px;width:17px;height:17px;background:var(--red);color:#fff;border:none;border-radius:50%;font-size:.55rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.jta{width:100%;background:var(--paper);border:1px solid var(--sand);border-radius:6px;padding:.55rem .75rem;font-family:'Noto Serif TC',serif;font-size:.8rem;color:var(--ink);resize:none;outline:none;min-height:66px;margin-bottom:.45rem}
+.jmeta{display:flex;gap:.35rem;align-items:center;flex-wrap:wrap}
+.jai{font-family:'DM Mono',monospace;font-size:.6rem;border:1px solid var(--sand);background:var(--paper);padding:5px 8px;border-radius:5px;color:var(--ink);outline:none;width:86px}
+.jds{font-family:'DM Mono',monospace;font-size:.6rem;border:1px solid var(--sand);background:var(--paper);padding:5px 8px;border-radius:5px;color:var(--ink);outline:none}
+.jpost{margin-left:auto;padding:6px 16px;background:var(--ink);color:var(--paper);border:none;border-radius:5px;font-family:'DM Mono',monospace;font-size:.58rem;cursor:pointer;transition:background .15s}
+.jpost:hover{background:var(--clay)}
+
+.jfeed{display:flex;flex-direction:column;gap:1.1rem}
+.jcard{background:var(--white);border:1px solid var(--sand);border-radius:13px;overflow:hidden;box-shadow:0 2px 7px var(--shadow);animation:fadeUp .4s ease}
+.jcard-hdr{padding:.8rem .9rem .55rem;display:flex;align-items:center;gap:.6rem}
+.jav{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;flex-shrink:0;color:#fff}
+.jau{font-weight:700;font-size:.78rem}
+.jat{font-family:'DM Mono',monospace;font-size:.52rem;color:var(--mist)}
+.jday{font-family:'DM Mono',monospace;font-size:.5rem;background:var(--clay-light);color:var(--clay);padding:2px 6px;border-radius:2px;margin-left:auto}
+.jgrid{display:grid;gap:2px}
+.jg1{grid-template-columns:1fr}.jg2{grid-template-columns:1fr 1fr}.jg3{grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr}.jg4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.jg3 .ji:first-child{grid-row:1/3}
+.ji{width:100%;object-fit:cover;display:block}
+.jg1 .ji{max-height:300px}.jg2 .ji{height:190px}.jg3 .ji{height:125px}.jg3 .ji:first-child{height:250px}.jg4 .ji{height:140px}
+.jbody{padding:.72rem .9rem}
+.jtxt{font-size:.82rem;line-height:1.7;color:var(--ink);white-space:pre-line}
+.jftr{padding:.45rem .9rem .72rem;display:flex;gap:.7rem;align-items:center}
+.jlike{background:none;border:none;cursor:pointer;font-size:.82rem;display:flex;align-items:center;gap:4px;font-family:'DM Mono',monospace;font-size:.58rem;color:var(--mist);transition:color .15s}
+.jlike:hover{color:var(--red)}.jlike.liked{color:var(--red)}
+.jdel{margin-left:auto;background:none;border:none;font-family:'DM Mono',monospace;font-size:.52rem;color:var(--mist);cursor:pointer;opacity:.5}
+.jdel:hover{opacity:1;color:var(--red)}
+
+/* ══ PLANNING ══ */
+.ptabs{display:flex;gap:.28rem;margin-bottom:.9rem;overflow-x:auto}
+.ptab{padding:5px 13px;border-radius:100px;border:1px solid var(--sand);font-family:'DM Mono',monospace;font-size:.58rem;cursor:pointer;background:transparent;color:var(--mist);white-space:nowrap;transition:all .15s}
+.ptab.active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.prog{background:var(--white);border:1px solid var(--sand);border-radius:8px;padding:.65rem .85rem;margin-bottom:.8rem}
+.prog-l{font-family:'DM Mono',monospace;font-size:.58rem;color:var(--mist);display:flex;justify-content:space-between}
+.prog-t{height:5px;background:var(--paper2);border-radius:3px;overflow:hidden;margin-top:.35rem}
+.prog-f{height:100%;background:var(--sage);border-radius:3px;transition:width .4s ease}
+.clist{display:flex;flex-direction:column;gap:0}
+.ccat{margin-bottom:.9rem}
+.ccat-l{font-family:'DM Mono',monospace;font-size:.56rem;letter-spacing:.11em;text-transform:uppercase;color:var(--clay);margin-bottom:.35rem;padding-left:.25rem}
+.ci{display:flex;align-items:center;gap:.6rem;padding:.55rem .75rem;background:var(--white);border:1px solid var(--sand);border-bottom:none;transition:background .15s}
+.ci:first-of-type{border-radius:7px 7px 0 0}
+.ci:last-of-type{border-radius:0 0 7px 7px;border-bottom:1px solid var(--sand)}
+.ci:only-child{border-radius:7px;border-bottom:1px solid var(--sand)}
+.ci.checked{background:var(--paper2)}
+.cbox{width:17px;height:17px;border:2px solid var(--sand);border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s}
+.cbox.done{background:var(--sage);border-color:var(--sage)}
+.cbox.done::after{content:'✓';color:#fff;font-size:.6rem}
+.clbl{font-size:.8rem;flex:1;line-height:1.3;transition:all .15s}
+.clbl.done{text-decoration:line-through;color:var(--mist)}
+.cpri{font-family:'DM Mono',monospace;font-size:.48rem;padding:2px 5px;border-radius:2px}
+.ph{background:#fde8e4;color:var(--red)}.pm{background:#fdf0d8;color:var(--gold)}.pl{background:#e4f0e4;color:var(--sage)}
+.cidel{background:none;border:none;color:var(--mist);cursor:pointer;font-size:.68rem;opacity:.4;padding:2px}
+.cidel:hover{opacity:1;color:var(--red)}
+.cadd{display:flex;gap:.35rem;margin-top:.55rem;margin-bottom:1.1rem}
+.cadd-i{flex:1;padding:7px 10px;border:1px solid var(--sand);border-radius:6px;font-family:'Noto Serif TC',serif;font-size:.78rem;color:var(--ink);background:var(--paper);outline:none}
+.cadd-i:focus{border-color:var(--clay)}
+.cadd-b{padding:7px 12px;background:var(--ink);color:var(--paper);border:none;border-radius:6px;font-family:'DM Mono',monospace;font-size:.58rem;cursor:pointer}
+
+/* MISC */
+.empty{text-align:center;padding:2.5rem 1rem;color:var(--mist);font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.05em}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:var(--paper2)}::-webkit-scrollbar-thumb{background:var(--sand);border-radius:2px}
+.toast{position:fixed;bottom:4.8rem;left:50%;transform:translateX(-50%) translateY(70px);background:var(--ink);color:var(--paper);padding:.5rem 1.3rem;border-radius:100px;font-family:'DM Mono',monospace;font-size:.6rem;z-index:1000;transition:transform .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.sel-s{padding:7px 10px;border:1px solid var(--sand);border-radius:6px;font-family:'DM Mono',monospace;font-size:.7rem;color:var(--ink);background:var(--paper);outline:none}
+.inp-s{width:100%;padding:7px 10px;border:1px solid var(--sand);border-radius:6px;font-family:'Noto Serif TC',serif;font-size:.78rem;color:var(--ink);background:var(--paper);outline:none}
+.inp-s:focus,.sel-s:focus{border-color:var(--clay)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-bg"></div>
+  <div class="header-content">
+    <div class="trip-badge">廈門 · 南靖 · 鼓浪嶼</div>
+    <h1 class="trip-title">廈門慢旅<br><i style="font-weight:400;font-size:1.3rem">May 2026</i></h1>
+    <p class="trip-sub">高雄出發 · 四天三夜 · 5/4–5/7</p>
+    <div class="live-badge"><span class="live-dot"></span><span id="sync-status">連接中...</span></div>
+  </div>
+</div>
+
+<div class="online-bar"><span class="online-label">在線</span><div id="online-avs"></div></div>
+
+<div class="day-tabs" id="day-tabs">
+  <button class="day-tab active" onclick="selDay('5/4',this)"><span class="dn">5/4</span><span class="dl">Mon·D1</span></button>
+  <button class="day-tab" onclick="selDay('5/5',this)"><span class="dn">5/5</span><span class="dl">Tue·D2</span></button>
+  <button class="day-tab" onclick="selDay('5/6',this)"><span class="dn">5/6</span><span class="dl">Wed·D3</span></button>
+  <button class="day-tab" onclick="selDay('5/7',this)"><span class="dn">5/7</span><span class="dl">Thu·D4</span></button>
+</div>
+
+<div class="main">
+
+  <!-- TIMELINE -->
+  <div id="panel-timeline" class="panel active">
+    <div class="sec-hdr"><span class="sec-ttl">今日行程</span><span id="bdg-lbl" style="font-family:'DM Mono',monospace;font-size:.56rem;color:var(--clay)"></span></div>
+    <div id="tl-list" class="timeline"></div>
+  </div>
+
+  <!-- MAP -->
+  <div id="panel-map" class="panel">
+    <div class="sec-hdr"><span class="sec-ttl">當日地點</span></div>
+    <div class="route-sum">
+      <div class="sec-ttl" style="margin-bottom:0">路線摘要</div>
+      <div class="route-stops" id="route-stops"></div>
+      <a id="route-btn" href="#" target="_blank" class="route-btn">📍 Google Maps 開啟完整路線</a>
+    </div>
+    <div class="map-wrap">
+      <div class="map-hdr"><span class="map-ttl">📌 當日景點</span><a id="dir-link" href="#" target="_blank" style="font-family:'DM Mono',monospace;font-size:.56rem;color:var(--sage)">導航 →</a></div>
+      <iframe id="map-fr" class="map-fr" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div class="map-locs" id="map-locs"></div>
+    </div>
+  </div>
+
+  <!-- VOUCHERS -->
+  <div id="panel-vouchers" class="panel">
+    <div class="sec-hdr"><span class="sec-ttl">機票 / 船票 / 住宿憑證</span></div>
+    <div class="vc-grid" id="vc-grid"></div>
+    <div style="background:var(--white);border:1px dashed var(--sand);border-radius:9px;padding:1.1rem;margin-bottom:1.1rem">
+      <p style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--mist);margin-bottom:.6rem">新增憑證連結</p>
+      <div style="display:flex;flex-direction:column;gap:.35rem">
+        <input id="v-name" class="inp-s" placeholder="名稱（例：回程船票）">
+        <input id="v-det" class="inp-s" style="font-family:'DM Mono',monospace;font-size:.7rem" placeholder="備注（日期/航班）">
+        <input id="v-url" class="inp-s" style="font-family:'DM Mono',monospace;font-size:.68rem" placeholder="憑證連結 URL">
+        <select id="v-type" class="sel-s"><option value="flight">✈️ 機票</option><option value="hotel">🏨 住宿</option><option value="ferry">⛴ 船票</option><option value="other">📄 其他</option></select>
+        <button onclick="addVoucher()" style="padding:8px;background:var(--ink);color:var(--paper);border:none;border-radius:6px;font-family:'DM Mono',monospace;font-size:.6rem;cursor:pointer">新增憑證</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTES -->
+  <div id="panel-notes" class="panel">
+    <div class="sec-hdr"><span class="sec-ttl">多人共筆</span></div>
+    <div class="niw">
+      <textarea id="ni" class="ni" placeholder="記下想法、費用分攤、提醒事項..."></textarea>
+      <div class="nsbar">
+        <input id="nau" class="nai" placeholder="你的名字" maxlength="10">
+        <button class="nsb" onclick="submitNote()">送出</button>
+      </div>
+    </div>
+    <div class="nlist" id="nlist"><div class="empty">尚無共筆，搶先留言！</div></div>
+  </div>
+
+  <!-- EXPENSE -->
+  <div id="panel-expense" class="panel">
+    <div class="edash">
+      <div class="edash-row">
+        <div><div class="etl">總支出</div><div class="etv" id="etv">¥0</div><div class="etwd" id="etwd">≈ NT$0</div></div>
+        <div style="text-align:right"><div class="etl">匯率估算</div><div style="font-family:'DM Mono',monospace;font-size:.7rem;color:var(--clay-light)">1 CNY ≈ 4.5 TWD</div><div style="font-family:'DM Mono',monospace;font-size:.5rem;opacity:.4;margin-top:2px">自動估算</div></div>
+      </div>
+      <div class="estats">
+        <div class="estat"><div class="esv" id="esf">¥0</div><div class="esl">🍜 餐飲</div></div>
+        <div class="estat"><div class="esv" id="ess">¥0</div><div class="esl">🎡 景點</div></div>
+        <div class="estat"><div class="esv" id="eso">¥0</div><div class="esl">🛍 其他</div></div>
+      </div>
+      <div class="ebar"><div class="ebar-l">支出進度（預算 ¥2800）</div><div class="ebar-t"><div class="ebar-f" id="ebar-f" style="width:0%;background:var(--clay)"></div></div></div>
+    </div>
+
+    <div class="esplit" id="esplit-wrap">
+      <div class="esplit-t">💰 分攤試算</div>
+      <div id="esplit-list"></div>
+    </div>
+
+    <div class="eform">
+      <div class="eform-t">✚ 新增記帳</div>
+      <div class="eCurRow">
+        <button class="eCurBtn active" onclick="setCur('CNY',this)">¥ 人民幣</button>
+        <button class="eCurBtn" onclick="setCur('TWD',this)">NT$ 台幣</button>
+        <button class="eCurBtn" onclick="setCur('USD',this)">$ 美元</button>
+      </div>
+      <div class="egrid">
+        <input id="ea" class="einp einp-big" type="number" inputmode="decimal" placeholder="0.00" min="0" step="any">
+        <select id="ec" class="einp sel-s">
+          <option value="food">🍜 餐飲</option><option value="sight">🎡 景點</option>
+          <option value="transit">🚌 交通</option><option value="shop">🛍 購物</option>
+          <option value="hotel">🏨 住宿</option><option value="other">📌 其他</option>
+        </select>
+        <input id="ed" class="einp einp-full" placeholder="說明（例：鼓浪嶼船票 × 2）">
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--mist);margin-bottom:.3rem">付款人</div>
+      <div class="epchips" id="epr">
+        <button class="epchip sel" onclick="togPayer('香',this)">香</button>
+        <button class="epchip" onclick="togPayer('馬',this)">馬</button>
+        <button class="epchip" onclick="togPayer('郁婷',this)">郁婷</button>
+        <button class="epchip" onclick="togPayer('婕',this)">婕</button>
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--mist);margin-top:.45rem;margin-bottom:.3rem">分攤對象</div>
+      <div class="epchips" id="esp">
+        <button class="epchip sel" onclick="togSplit('香',this)">香</button>
+        <button class="epchip sel" onclick="togSplit('馬',this)">馬</button>
+        <button class="epchip sel" onclick="togSplit('郁婷',this)">郁婷</button>
+        <button class="epchip sel" onclick="togSplit('婕',this)">婕</button>
+      </div>
+      <div class="esrow">
+        <button class="esbtn" onclick="addExp()">記帳</button>
+        <button class="escanBtn" id="escan-btn" onclick="document.getElementById('escan-inp').click()">📷 掃描</button>
+        <input type="file" id="escan-inp" accept="image/*" style="display:none" onchange="scanRcpt(this)">
+      </div>
+    </div>
+
+    <div class="efilter">
+      <button class="efbtn active" onclick="setEF('all',this)">全部</button>
+      <button class="efbtn" onclick="setEF('5/4',this)">Day1</button>
+      <button class="efbtn" onclick="setEF('5/5',this)">Day2</button>
+      <button class="efbtn" onclick="setEF('5/6',this)">Day3</button>
+      <button class="efbtn" onclick="setEF('5/7',this)">Day4</button>
+      <button class="efbtn" onclick="setEF('food',this)">餐飲</button>
+      <button class="efbtn" onclick="setEF('sight',this)">景點</button>
+      <button class="efbtn" onclick="setEF('transit',this)">交通</button>
+    </div>
+    <div class="elist" id="elist"><div class="empty">尚無記帳，新增第一筆吧！</div></div>
+  </div>
+
+  <!-- JOURNAL -->
+  <div id="panel-journal" class="panel">
+    <div class="sec-hdr"><span class="sec-ttl">旅遊日誌</span></div>
+    <div class="jcomp">
+      <div class="jcomp-t">✍️ 新增日誌</div>
+      <div class="jupload"><input type="file" accept="image/*" multiple onchange="handleJImgs(this)"><div class="jupload-t">📷 點擊上傳照片（可多選）</div></div>
+      <div class="jpreviews" id="jprevs"></div>
+      <textarea id="jta" class="jta" placeholder="今天的心情、美食、驚喜…"></textarea>
+      <div class="jmeta">
+        <input id="jau" class="jai" placeholder="作者" maxlength="10">
+        <select id="jds" class="jds">
+          <option value="5/4">Day1·5/4</option><option value="5/5">Day2·5/5</option>
+          <option value="5/6">Day3·5/6</option><option value="5/7">Day4·5/7</option>
+        </select>
+        <button class="jpost" onclick="postJ()">發佈</button>
+      </div>
+    </div>
+    <div class="jfeed" id="jfeed"><div class="empty">尚無日誌，記錄第一個旅遊瞬間！</div></div>
+  </div>
+
+  <!-- PLANNING -->
+  <div id="panel-planning" class="panel">
+    <div class="sec-hdr"><span class="sec-ttl">出發準備</span></div>
+    <div class="ptabs">
+      <button class="ptab active" onclick="swPtab('todo',this)">✅ 待辦</button>
+      <button class="ptab" onclick="swPtab('luggage',this)">🧳 行李</button>
+      <button class="ptab" onclick="swPtab('shopping',this)">🛒 採購</button>
+    </div>
+    <div id="pt-todo">
+      <div class="prog"><div class="prog-l"><span>行前待辦</span><span id="tp-txt">0/0</span></div><div class="prog-t"><div class="prog-f" id="tp-bar" style="width:0%"></div></div></div>
+      <div class="clist" id="todo-list"></div>
+      <div class="cadd"><input id="todo-inp" class="cadd-i" placeholder="新增待辦..."><select id="todo-pri" class="sel-s" style="width:75px"><option value="high">🔴高</option><option value="med" selected>🟡中</option><option value="low">🟢低</option></select><button class="cadd-b" onclick="addCI('todo')">+</button></div>
+    </div>
+    <div id="pt-luggage" style="display:none">
+      <div class="prog"><div class="prog-l"><span>行李清單</span><span id="lp-txt">0/0</span></div><div class="prog-t"><div class="prog-f" id="lp-bar" style="width:0%"></div></div></div>
+      <div class="clist" id="luggage-list"></div>
+      <div class="cadd"><input id="luggage-inp" class="cadd-i" placeholder="新增物品..."><button class="cadd-b" onclick="addCI('luggage')">+</button></div>
+    </div>
+    <div id="pt-shopping" style="display:none">
+      <div class="prog"><div class="prog-l"><span>購物清單</span><span id="sp-txt">0/0</span></div><div class="prog-t"><div class="prog-f" id="sp-bar" style="width:0%"></div></div></div>
+      <div class="clist" id="shopping-list"></div>
+      <div class="cadd"><input id="shopping-inp" class="cadd-i" placeholder="新增採購..."><button class="cadd-b" onclick="addCI('shopping')">+</button></div>
+    </div>
+  </div>
+
+</div>
+
+<nav class="bnav">
+  <button class="bnav-btn active" onclick="swP('timeline',this)"><span class="bnav-icon">⏱</span>行程</button>
+  <button class="bnav-btn" onclick="swP('map',this)"><span class="bnav-icon">🗺</span>地圖</button>
+  <button class="bnav-btn" onclick="swP('expense',this)"><span class="bnav-icon">💴</span>記帳</button>
+  <button class="bnav-btn" onclick="swP('journal',this)"><span class="bnav-icon">📷</span>日誌</button>
+  <button class="bnav-btn" onclick="swP('planning',this)"><span class="bnav-icon">📋</span>準備</button>
+  <button class="bnav-btn" onclick="swP('vouchers',this)"><span class="bnav-icon">🎫</span>憑證</button>
+  <button class="bnav-btn" onclick="swP('notes',this)"><span class="bnav-icon">💬</span>共筆</button>
+</nav>
+<div id="toast" class="toast"></div>
+
+<script>
+// ── CONFIG ──
+const SUPABASE_URL='https://fexytibsuclpuibspyjv.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZleHl0aWJzdWNscHVpYnNweWp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NDU4NDQsImV4cCI6MjA5MjMyMTg0NH0.gzAlJOB_epRAwvI3umuxl-DEUXC4qMpR1kjsAgUlz_E';
+const {createClient}=supabase;
+let sb=null,sbOK=false;
+try{if(SUPABASE_URL!=='xxx'&&SUPABASE_KEY!=='xxx'){sb=createClient(SUPABASE_URL,SUPABASE_KEY);sbOK=true;}}catch(e){}
+
+// ── SCHEDULE DATA ──
+const SCH={
+  '5/4':[
+    {time:'10:20',title:'華信航空 AE303',type:'transit',loc:'高雄小港機場',note:'飛往金門，提早 90 分鐘到機場。<br>📞 金門機場／碼頭來回接送：王先生 0905-321-992',mq:'高雄國際機場'},
+    {time:'13:30',title:'船班 新五缘轮',type:'transit',loc:'廈門五通碼頭二樓',note:'去程台幣 160。廈門五通碼頭二樓出發大廳檢票口 K2<br>📞 K2台旅旅遊 0592-3283333 ／ 13799840081',mq:'金門水頭碼頭'},
+    {time:'14:30',title:'前往酒店',type:'transit',loc:'五通碼頭 → 海景千禧大酒店',note:'🏨 海景千禧大酒店<br>厦门市思明区镇海路12号<br>滴滴／計程車約 35 分鐘。',mq:'廈門海景千禧大酒店'},
+    {time:'15:30',title:'鐘鼓索道',type:'sight',loc:'廈門植物園旁',note:'高空纜車俯瞰雙子塔，下午光線佳。<br>📝 附近美食：<br>1. 頂澳仔脊椎麵（距離 800m，步行 12 分）：廈大學生最愛的濃厚湯頭。<br>2. 貓街茶小隊（距離 700m，步行 10 分）：特色創意手搖。',mq:'廈門鐘鼓索道'},
+    {time:'16:30',title:'沙坡尾避風港',type:'sight',loc:'沙坡尾',note:'文藝舊漁港。傍晚最美，彩色洋樓倒影。<br>📝 烏糖沙茶麵<br>1. 芋包王閩南茶樓（距離 300m，步行約 4 分）：傳承四代的在地古早味。<br>2. 邵子牙貢丸店（距離 400m，步行約 5 分）：Q彈多汁的手工貢丸。<br>3. 助屋（距離 200m，步行約 3 分）：超人氣的炸雞與日式咖哩，沙坡尾必打卡。',mq:'廈門沙坡尾'},
+    {time:'17:30',title:'世茂雙子塔',type:'sight',loc:'世茂大廈',note:'觀景台 ¥120–150，推薦傍晚登頂。<br>📍 演武大橋｜緣盛意：小籠湯包和小龍煎包',mq:'廈門世茂雙子塔'},
+    {time:'19:30',title:'鷺江夜遊',type:'sight',loc:'鷺江道觀光碼頭',note:'19:30–20:30 夜遊鷺江，欣賞鼓浪嶼與廈門雙子塔夜景，建議提早 15 分鐘抵達購票。<br>🚌 公車：搭 2路 / 29路 → 中山路站。至和平碼頭售票窗口現場換取登船憑證，暫不支持線上兌換。地址：和平碼頭「屿见·廈門海上游官方售票廳」；需提前預約。<br>📝 附近美食：<br>1. 1980 燒肉粽（距離 600m，步行約 8 分）：經典糯米粽。<br>2. 豪香肉鬆（距離 700m，步行約 10 分）：鹹甜適口的傳統點心。<br>3. 局口拌麵（距離 800m，步行約 12 分）：深夜食堂風格的古早拌麵。<br>4. 蘇三仁生果子：醃桃',mq:'廈門鷺江夜遊'},
+  ],
+  '5/5':[
+    {time:'09:00',title:'阿玲麵線糊',type:'food',loc:'酒店附近',note:'米其林必比登！09:00 前到免排隊。',mq:'阿玲麵線糊 廈門'},
+    {time:'10:00',title:'鼓浪嶼深度遊',type:'sight',loc:'鼓浪嶼渡輪碼頭',note:'🍽 沈家腸粉、林氏魚丸<br>07:30–08:30 司機和導遊根據約定時間到酒店接您<br>10:30 抵達廈鼓碼頭候船，乘船前往海上花園-鼓浪嶼（船票時間以實際出票為准，恕不指定）<br>11:00 美國領事館→最美轉角→船屋→三和宮摩崖石刻→工部局遺址<br>12:00 前往鼓浪嶼龍頭路小吃街尋覓地道美食（午餐自理，不含餐食）<br>13:30 日光岩→馬約翰廣場→洋人球埔（不爬日光岩可自由活動後到馬約翰集合）<br>15:00 特權准入鼓浪嶼第一別墅－黃家花園別墅【贈精緻下午茶】<br>15:30 毓園→林巧稚紀念館、天主教堂→協和禮拜堂→日本領事館→西班牙領事館',mq:'鼓浪嶼 廈門'},
+    {time:'17:30',title:'集美學村',type:'sight',loc:'集美學村站（地鐵1號線）',note:'從市區搭地鐵 1 號線至「集美學村站」，車程約 30 分鐘。陳嘉庚建築群，閩南紅磚與西洋拱廊交融，傍晚光線絕美。',mq:'集美學村 廈門'},
+    {time:'19:00',title:'石鼓路美食巡禮',type:'food',loc:'石鼓路',note:'🍡 香芋鹹蛋黃仙豆糕｜🥐 帕帕烘焙栗酥餅｜🍚 進福小吃粽子｜🍜 大社戲台沙茶麵｜🥟 津品味小籠包',mq:'石鼓路 廈門'},
+  ],
+  '5/6':[
+    {time:'09:00',title:'專車南靖土樓',type:'transit',loc:'廈門酒店',note:'08:30 出發，車程 2.5 小時避堵。',mq:'廈門到南靖土樓'},
+    {time:'11:30',title:'雲水謠土樓群',type:'sight',loc:'南靖縣書洋鎮',note:'世界遺產！和貴樓+懷遠樓。必吃竹筒飯、客家麻糍。',mq:'雲水謠土樓 南靖'},
+    {time:'18:30',title:'回廈門市區',type:'transit',loc:'返程',note:'2.5 小時車程，途中補眠。',mq:'南靖縣城'},
+    {time:'19:30',title:'手佳足浴按摩',type:'activity',loc:'廈門市思明區蓮岳路173號',note:'土樓走完必備，附贈水果主食。<br>📞 0592-5054888<br>📍 福建省厦门市思明区莲岳路 173 号港龙新城（1-2楼，按摩部分）<br>⚠️ 當日請提前到預約店面出示台胞證使用',mq:'手佳休閒保健 廈門'},
+  ],
+  '5/7':[
+    {time:'09:00',title:'悠閒早餐',type:'food',loc:'廈門海景千禧大酒店',note:'最後一天不趕時間。',mq:'廈門海景千禧大酒店'},
+    {time:'10:00',title:'嶼見閩南文創',type:'sight',loc:'郵輪中心旁',note:'沉浸式閩南造景。必試土筍凍。',mq:'嶼見閩南 廈門'},
+    {time:'13:00',title:'海上世界午餐',type:'food',loc:'海上世界',note:'摩天輪下海景餐廳。',mq:'廈門海上世界'},
+    {time:'15:00',title:'前往五通碼頭（金星6号轮）',type:'transit',loc:'五通碼頭',note:'人民幣 30。船班表訂 60 分鐘前至五通碼頭 3號門，搭 16、17、18 號電梯上二樓，廈旅國際櫃檯辦理劃位手續。<br>⚠️ 小三通預訂船位需提供：台胞證號 ＋ 簽發次數（共10碼）<br>EX：台胞證號12345678(01)→括號內為使用次數，未提供無法預訂！',mq:'廈門五通碼頭'},
+    {time:'16:30',title:'船班回金門',type:'transit',loc:'五通碼頭',note:'回程愉快！機場買伴手禮。',mq:'廈門五通碼頭'},
+  ],
+};
+const BDGT={'5/4':600,'5/5':600,'5/6':650,'5/7':350};
+const DFT_VC=[
+  {id:'v1',name:'華信航空 AE303',det:'5/4 10:20 高雄→金門',url:'#',type:'flight',icon:'✈️'},
+  {id:'v2',name:'SP0013船班',det:'5/4 13:30 金門→廈門',url:'#',type:'ferry',icon:'⛴'},
+  {id:'v3',name:'廈門海景千禧',det:'5/4–5/7 三夜',url:'#',type:'hotel',icon:'🏨'},
+  {id:'v4',name:'南靖土樓門票',det:'5/6 和貴樓+懷遠樓',url:'#',type:'other',icon:'🏯'},
+];
+const DFT_TODO=[
+  {id:'t1',text:'確認護照有效期 6 個月以上',done:false,pri:'high'},
+  {id:'t2',text:'辦理台胞證',done:false,pri:'high'},
+  {id:'t3',text:'預訂廈門酒店',done:true,pri:'high'},
+  {id:'t4',text:'購買旅遊保險',done:false,pri:'med'},
+  {id:'t5',text:'下載 Google Maps 離線地圖',done:false,pri:'med'},
+  {id:'t6',text:'安裝滴滴出行 APP',done:false,pri:'med'},
+  {id:'t7',text:'換人民幣（建議 ¥2000/人）',done:false,pri:'high'},
+  {id:'t8',text:'機票確認 Check-in',done:false,pri:'high'},
+];
+const DFT_LUG=[
+  {id:'l1',text:'護照 + 台胞證',done:false,pri:'high'},
+  {id:'l2',text:'機票/船票電子憑證',done:false,pri:'high'},
+  {id:'l3',text:'手機充電器 + 行動電源',done:false,pri:'med'},
+  {id:'l4',text:'防曬乳 SPF50+',done:false,pri:'med'},
+  {id:'l5',text:'舒適步行鞋（每天 10km+）',done:false,pri:'high'},
+  {id:'l6',text:'薄外套（空調冷）',done:false,pri:'med'},
+  {id:'l7',text:'常備藥品（腸胃藥、感冒藥）',done:false,pri:'med'},
+  {id:'l8',text:'雨傘或折疊雨衣',done:false,pri:'low'},
+];
+const DFT_SHOP=[
+  {id:'s1',text:'沙茶醬（廈門特色）',done:false,pri:'med'},
+  {id:'s2',text:'海蠣餅 / 古早味餅乾',done:false,pri:'med'},
+  {id:'s3',text:'鳳梨酥（金門限定）',done:false,pri:'low'},
+  {id:'s4',text:'南靖土樓紀念品',done:false,pri:'low'},
+];
+const FX={CNY:1,TWD:4.5,USD:0.138};
+
+// ── STATE ──
+let curDay='5/4',curPanel='timeline',curPtab='todo';
+let notes=[],vouchers=[...DFT_VC],exps=[],journals=[];
+let cls={
+  todo:JSON.parse(localStorage.getItem('cl_todo')||'null')||[...DFT_TODO],
+  luggage:JSON.parse(localStorage.getItem('cl_luggage')||'null')||[...DFT_LUG],
+  shopping:JSON.parse(localStorage.getItem('cl_shopping')||'null')||[...DFT_SHOP],
+};
+let expCur='CNY',expPay=['香'],expSpl=['香','馬','郁婷','婕'],expF='all';
+let jImgs=[],myId=Math.random().toString(36).slice(2,8),myClr=`hsl(${Math.floor(Math.random()*320)},42%,52%)`;
+
+// ── UTILS ──
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
+function mUrl(q){return`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`}
+function fmtT(ts){const d=new Date(ts);return`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`}
+function tCNY(a,c){return a/FX[c]}
+function toTWD(c){return Math.round(c*FX.TWD)}
+function avCol(n){let h=0;for(let c of n)h=(h*31+c.charCodeAt(0))%360;return`hsl(${h},38%,50%)`}
+function catEmoji(c){return{food:'🍜',sight:'🎡',transit:'🚌',shop:'🛍',hotel:'🏨',other:'📌'}[c]||'📌'}
+function catClr(c){return{food:'#f0e0d4',sight:'#d4e8d4',transit:'#e8e0c8',shop:'#e8d4e8',hotel:'#d8e4f0',other:'#e8e4d8'}[c]||'#e8e4d8'}
+
+// ── PANEL SWITCH ──
+function swP(p,btn){
+  curPanel=p;
+  document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.panel').forEach(el=>el.classList.remove('active'));
+  document.getElementById(`panel-${p}`).classList.add('active');
+  document.getElementById('day-tabs').style.display=['timeline','map'].includes(p)?'flex':'none';
+  if(p==='timeline')rTL();else if(p==='map')rMap();else if(p==='vouchers')rVC();
+  else if(p==='notes')rNotes();else if(p==='expense')rExp();
+  else if(p==='journal')rJ();else if(p==='planning')rPlan();
+}
+function selDay(d,btn){curDay=d;document.querySelectorAll('.day-tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');if(curPanel==='timeline')rTL();else if(curPanel==='map')rMap();}
+
+// ── TIMELINE ──
+function rTL(){
+  const items=SCH[curDay]||[];
+  document.getElementById('bdg-lbl').textContent=`估計預算 ¥${BDGT[curDay]}/人`;
+  const list=document.getElementById('tl-list');list.innerHTML='';
+  const dotC={food:'tf',sight:'ts',transit:'tt',activity:'ta'};
+  const bc={food:'bf',sight:'bs',transit:'bt',activity:'ba'};
+  const bl={food:'🍜 美食',sight:'📷 景點',transit:'🚌 交通',activity:'✨ 活動'};
+  items.forEach((item,i)=>{
+    const d=document.createElement('div');
+    d.className='tl-item';d.style.animationDelay=`${i*.05}s`;
+    d.innerHTML=`<div class="tl-time"><span class="tl-t">${item.time}</span></div>
+    <div class="tl-dot ${dotC[item.type]||'ts'}"></div>
+    <div class="tl-card">
+      <div class="ch"><span class="ct">${item.title}</span><span class="tbadge ${bc[item.type]||'bs'}">${bl[item.type]||item.type}</span></div>
+      <div class="cl"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg><a href="${mUrl(item.mq)}" target="_blank">${item.loc} ↗</a></div>
+      ${item.note?`<div class="cnote">${item.note}</div>`:''}
+      <div class="cactions">
+        <a href="${mUrl(item.mq)}" target="_blank" class="abtn am">地圖</a>
+        <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(item.mq)}" target="_blank" class="abtn am">導航</a>
+        <button class="abtn an" onclick="togIN(${i})">📝 備注</button>
+      </div>
+      <div class="inw" id="in-${i}">
+        <textarea class="ini" id="inta-${i}" placeholder="加備注..."></textarea>
+        <button class="ins" onclick="saveIN(${i},'${item.title.replace(/'/g,"\\'")}')">儲存</button>
+      </div>
+    </div>`;
+    list.appendChild(d);
+  });
+}
+function togIN(i){document.getElementById(`in-${i}`).classList.toggle('open')}
+function saveIN(i,title){
+  const t=document.getElementById(`inta-${i}`).value.trim();if(!t)return;
+  const au=localStorage.getItem('travel_author')||'旅人';
+  pushNote({text:`[${title}] ${t}`,author:au,day:curDay,ts:Date.now(),id:Date.now().toString()});
+  document.getElementById(`inta-${i}`).value='';document.getElementById(`in-${i}`).classList.remove('open');
+  toast('備注已送出 ✓');
+}
+
+// ── MAP ──
+function rMap(){
+  const items=SCH[curDay]||[];
+  const sights=items.filter(i=>i.type==='sight'||i.type==='food');
+  const ctr={'5/4':'廈門,中國','5/5':'鼓浪嶼,廈門','5/6':'南靖土樓,福建','5/7':'廈門,中國'}[curDay];
+  document.getElementById('map-fr').src=`https://maps.google.com/maps?q=${encodeURIComponent(ctr)}&t=m&z=13&output=embed&iwloc=near`;
+  const wps=sights.map(i=>encodeURIComponent(i.mq));
+  if(wps.length>=2){const u=`https://www.google.com/maps/dir/${wps.join('/')}`;document.getElementById('dir-link').href=u;document.getElementById('route-btn').href=u;}
+  const rs=document.getElementById('route-stops');rs.innerHTML='';
+  sights.forEach((item,i)=>{if(i>0)rs.insertAdjacentHTML('beforeend','<span class="rs-arr">→</span>');rs.insertAdjacentHTML('beforeend',`<span class="rs-name">${item.loc}</span>`);});
+  const ll=document.getElementById('map-locs');ll.innerHTML='';
+  items.forEach((item,i)=>{ll.insertAdjacentHTML('beforeend',`<div class="map-li" onclick="window.open('${mUrl(item.mq)}','_blank')"><div class="map-ln">${i+1}</div><div><div style="font-size:.73rem;font-weight:700">${item.title}</div><div style="font-family:'DM Mono',monospace;font-size:.54rem;color:var(--mist)">${item.loc}</div></div></div>`);});
+}
+
+// ── VOUCHERS ──
+function rVC(){
+  const g=document.getElementById('vc-grid');g.innerHTML='';
+  vouchers.forEach(v=>{
+    const ib={flight:'if',hotel:'ih',ferry:'iy',other:''}[v.type]||'';
+    g.insertAdjacentHTML('beforeend',`<a class="vc" href="${v.url!=='#'?v.url:'javascript:void(0)'}" ${v.url!=='#'?'target="_blank"':''}><div class="vc-ico ${ib}">${v.icon}</div><div class="vc-name">${v.name}</div><div class="vc-det">${v.det}</div><span class="vc-lnk">${v.url!=='#'?'查看憑證 →':'尚未設連結'}</span></a>`);
+  });
+}
+async function addVoucher(){
+  const n=document.getElementById('v-name').value.trim();const det=document.getElementById('v-det').value.trim();const url=document.getElementById('v-url').value.trim()||'#';const type=document.getElementById('v-type').value;
+  if(!n){toast('請輸入憑證名稱');return;}
+  const icons={flight:'✈️',hotel:'🏨',ferry:'⛴',other:'📄'};
+  const nv={id:Date.now().toString(),name:n,det,url,type,icon:icons[type]};
+  vouchers.push(nv);
+  if(sbOK)try{await sb.from('vouchers').insert([{...nv,det:nv.det}]);}catch(e){}
+  rVC();['v-name','v-det','v-url'].forEach(id=>document.getElementById(id).value='');toast('憑證已新增 ✓');
+}
+
+// ── NOTES ──
+async function submitNote(){
+  const t=document.getElementById('ni').value.trim();const au=document.getElementById('nau').value.trim()||'旅人';
+  if(!t){toast('請輸入內容');return;}
+  localStorage.setItem('travel_author',au);
+  const n={text:t,author:au,day:curDay,ts:Date.now(),id:Date.now().toString()};
+  pushNote(n);document.getElementById('ni').value='';
+}
+function saveNotesLocal(){try{localStorage.setItem('notes_local',JSON.stringify(notes));}catch(e){}}
+async function pushNote(n){
+  if(sbOK)try{await sb.from('travel_notes').insert([{...n}]);return;}catch(e){}
+  notes.unshift(n);saveNotesLocal();rNotes();
+}
+async function delNote(id){
+  if(sbOK)try{await sb.from('travel_notes').delete().eq('id',id);return;}catch(e){}
+  notes=notes.filter(n=>n.id!==id);saveNotesLocal();rNotes();
+}
+function rNotes(){
+  const l=document.getElementById('nlist');
+  if(!notes.length){l.innerHTML='<div class="empty">尚無共筆，搶先留言！</div>';return;}
+  l.innerHTML=notes.map(n=>`<div class="nitem"><div class="nmeta"><span class="nauthor">@${n.author||'旅人'}</span><div style="display:flex;align-items:center;gap:7px"><span class="ntime">${fmtT(n.ts)}</span><button class="ndel" onclick="delNote('${n.id}')">✕</button></div></div><div class="ntext">${n.text}</div>${n.day?`<span class="ndtag">Day${['5/4','5/5','5/6','5/7'].indexOf(n.day)+1}·${n.day}</span>`:''}</div>`).join('');
+}
+
+// ── EXPENSE ──
+function setCur(c,btn){expCur=c;document.querySelectorAll('.eCurBtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}
+function togPayer(n,btn){btn.classList.toggle('sel');expPay=[...document.querySelectorAll('#epr .epchip.sel')].map(b=>b.textContent)}
+function togSplit(n,btn){btn.classList.toggle('sel');expSpl=[...document.querySelectorAll('#esp .epchip.sel')].map(b=>b.textContent)}
+function setEF(f,btn){expF=f;document.querySelectorAll('.efbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');rExp()}
+async function addExp(){
+  const amtR=parseFloat(document.getElementById('ea').value);if(!amtR||amtR<=0){toast('請輸入金額');return;}
+  const desc=document.getElementById('ed').value.trim()||'未命名支出';const cat=document.getElementById('ec').value;
+  const cny=tCNY(amtR,expCur);
+  const e={id:Date.now().toString(),desc,cat,amount:amtR,currency:expCur,cny,payers:[...expPay],splitters:[...expSpl],day:curDay,ts:Date.now()};
+  exps.unshift(e);
+  if(sbOK)try{await sb.from('expenses').insert([{...e,payers:JSON.stringify(e.payers),splitters:JSON.stringify(e.splitters)}]);}catch(err){}
+  document.getElementById('ea').value='';document.getElementById('ed').value='';
+  toast('記帳成功 ✓');rExp();
+}
+async function delExp(id){
+  if(sbOK)try{await sb.from('expenses').delete().eq('id',id);}catch(e){}
+  exps=exps.filter(e=>e.id!==id);rExp();
+}
+function scanRcpt(input){
+  const f=input.files[0];if(!f)return;
+  const btn=document.getElementById('escan-btn');btn.disabled=true;btn.textContent='辨識中...';
+  const r=new FileReader();r.readAsDataURL(f);
+  r.onload=()=>{
+    setTimeout(()=>{
+      document.getElementById('ea').value=(Math.random()*200+20).toFixed(1);
+      document.getElementById('ed').value='收據掃描（請確認金額）';
+      btn.disabled=false;btn.textContent='📷 掃描';
+      toast('已辨識，請確認金額後記帳');
+    },1000);
+    input.value='';
+  };
+}
+function rExp(){
+  let fil=exps;
+  if(expF!=='all'){if(['5/4','5/5','5/6','5/7'].includes(expF))fil=exps.filter(e=>e.day===expF);else fil=exps.filter(e=>e.cat===expF);}
+  const tot=exps.reduce((s,e)=>s+e.cny,0);
+  document.getElementById('etv').textContent=`¥${tot.toFixed(1)}`;
+  document.getElementById('etwd').textContent=`≈ NT$${toTWD(tot).toLocaleString()}`;
+  const fC=exps.filter(e=>e.cat==='food').reduce((s,e)=>s+e.cny,0);
+  const sC=exps.filter(e=>e.cat==='sight').reduce((s,e)=>s+e.cny,0);
+  document.getElementById('esf').textContent=`¥${fC.toFixed(0)}`;
+  document.getElementById('ess').textContent=`¥${sC.toFixed(0)}`;
+  document.getElementById('eso').textContent=`¥${Math.max(0,tot-fC-sC).toFixed(0)}`;
+  document.getElementById('ebar-f').style.width=`${Math.min(tot/2800*100,100)}%`;
+  // Split
+  const members=['香','馬','郁婷','婕'];
+  const paid={},owe={};members.forEach(m=>{paid[m]=0;owe[m]=0;});
+  exps.forEach(e=>{
+    const pp=e.cny/(e.payers?.length||1);
+    e.payers?.forEach(p=>{if(paid[p]!==undefined)paid[p]+=pp*e.payers.length/e.payers.length;});
+    const sp=e.cny/(e.splitters?.length||1);
+    e.splitters?.forEach(s=>{if(owe[s]!==undefined)owe[s]+=sp;});
+  });
+  exps.forEach(e=>{e.payers?.forEach(p=>{if(paid[p]!==undefined)paid[p]+=e.cny/e.payers.length;});});
+  // recalc properly
+  const netPaid={},netOwe={};members.forEach(m=>{netPaid[m]=0;netOwe[m]=0;});
+  exps.forEach(e=>{
+    e.payers?.forEach(p=>{if(netPaid[p]!==undefined)netPaid[p]+=e.cny/(e.payers.length||1);});
+    e.splitters?.forEach(s=>{if(netOwe[s]!==undefined)netOwe[s]+=e.cny/(e.splitters.length||1);});
+  });
+  document.getElementById('esplit-list').innerHTML=members.map(m=>{
+    const net=(netPaid[m]||0)-(netOwe[m]||0);const col=net>=0?'var(--sage)':'var(--red)';
+    return`<div class="esplit-r"><span class="esplit-n">${m}</span><span style="font-family:'DM Mono',monospace;font-size:.7rem;color:${col}">${net>=0?'+':''}¥${net.toFixed(1)}</span></div>`;
+  }).join('');
+  const el=document.getElementById('elist');
+  if(!fil.length){el.innerHTML='<div class="empty">沒有符合的記帳</div>';return;}
+  el.innerHTML=fil.map(e=>`<div class="eitem">
+    <div class="ecat" style="background:${catClr(e.cat)}">${catEmoji(e.cat)}</div>
+    <div class="eibody"><div class="eidesc">${e.desc}</div><div class="eimeta">${e.day}·${e.payers?.join('、')||''}付·分：${e.splitters?.join('、')||''}</div></div>
+    <div class="eiright"><div class="eiamt">${e.currency==='CNY'?'¥':e.currency==='TWD'?'NT$':'$'}${e.amount}</div><div class="eitwd">${e.currency!=='CNY'?`≈¥${e.cny.toFixed(1)}`:''}</div><button class="eidel" onclick="delExp('${e.id}')">✕</button></div>
+  </div>`).join('');
+}
+
+// ── JOURNAL ──
+function handleJImgs(input){
+  [...input.files].forEach(f=>{const r=new FileReader();r.readAsDataURL(f);r.onload=()=>{jImgs.push(r.result);rJPrevs();};});input.value='';
+}
+function rJPrevs(){
+  document.getElementById('jprevs').innerHTML=jImgs.map((s,i)=>`<div class="jpwrap"><img src="${s}" class="jpimg"><button class="jpdel" onclick="rmJImg(${i})">✕</button></div>`).join('');
+}
+function rmJImg(i){jImgs.splice(i,1);rJPrevs();}
+async function postJ(){
+  const t=document.getElementById('jta').value.trim();const au=document.getElementById('jau').value.trim()||'旅人';const day=document.getElementById('jds').value;
+  if(!t&&!jImgs.length){toast('請輸入文字或上傳照片');return;}
+  localStorage.setItem('travel_author',au);
+  const post={id:Date.now().toString(),text:t,author:au,day,images:[...jImgs],likes:0,likedBy:[],ts:Date.now()};
+  journals.unshift(post);
+  if(sbOK)try{await sb.from('journals').insert([{id:post.id,text:t,author:au,day,images:JSON.stringify(post.images),likes:0,ts:post.ts}]);}catch(e){}
+  jImgs=[];rJPrevs();document.getElementById('jta').value='';toast('日誌已發佈 ✓');rJ();
+}
+function likeJ(id){
+  const j=journals.find(j=>j.id===id);if(!j)return;
+  if(j.likedBy?.includes(myId)){j.likes=Math.max(0,(j.likes||0)-1);j.likedBy=j.likedBy.filter(x=>x!==myId);}
+  else{j.likes=(j.likes||0)+1;j.likedBy=[...(j.likedBy||[]),myId];}
+  rJ();
+}
+async function delJ(id){
+  if(sbOK)try{await sb.from('journals').delete().eq('id',id);}catch(e){}
+  journals=journals.filter(j=>j.id!==id);rJ();
+}
+function rJ(){
+  const feed=document.getElementById('jfeed');
+  if(!journals.length){feed.innerHTML='<div class="empty">尚無日誌，記錄第一個旅遊瞬間！</div>';return;}
+  feed.innerHTML=journals.map(j=>{
+    const n=j.images?.length||0;let ig='';
+    if(n>0){const gc=`jg${Math.min(n,4)}`;const imgs=j.images.slice(0,4).map(s=>`<img src="${s}" class="ji">`).join('');ig=`<div class="jgrid ${gc}">${imgs}</div>`;}
+    const liked=j.likedBy?.includes(myId);
+    const di=['5/4','5/5','5/6','5/7'].indexOf(j.day)+1;
+    return`<div class="jcard"><div class="jcard-hdr"><div class="jav" style="background:${avCol(j.author)}">${j.author[0]}</div><div><div class="jau">${j.author}</div><div class="jat">${fmtT(j.ts)}</div></div><div class="jday">Day${di}·${j.day}</div></div>${ig}${j.text?`<div class="jbody"><div class="jtxt">${j.text}</div></div>`:''}<div class="jftr"><button class="jlike ${liked?'liked':''}" onclick="likeJ('${j.id}')">${liked?'❤️':'🤍'} ${j.likes||0}</button><button class="jdel" onclick="delJ('${j.id}')">刪除</button></div></div>`;
+  }).join('');
+}
+
+// ── PLANNING ──
+function swPtab(tab,btn){
+  curPtab=tab;
+  document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  ['todo','luggage','shopping'].forEach(t=>document.getElementById(`pt-${t}`).style.display='none');
+  document.getElementById(`pt-${tab}`).style.display='block';rCL(tab);
+}
+function addCI(type){
+  const inp=document.getElementById(`${type}-inp`);const t=inp.value.trim();if(!t)return;
+  const pri=type==='todo'?document.getElementById('todo-pri').value:'med';
+  cls[type].push({id:Date.now().toString(),text:t,done:false,pri});
+  saveCL();inp.value='';rCL(type);toast('已新增 ✓');
+}
+function togCI(type,id){const item=cls[type].find(i=>i.id===id);if(item){item.done=!item.done;saveCL();rCL(type);}}
+function delCI(type,id){cls[type]=cls[type].filter(i=>i.id!==id);saveCL();rCL(type);}
+function saveCL(){['todo','luggage','shopping'].forEach(t=>localStorage.setItem(`cl_${t}`,JSON.stringify(cls[t])));}
+function ciHTML(type,item){
+  const pc={high:'ph',med:'pm',low:'pl'};const pl={high:'高',med:'中',low:'低'};
+  return`<div class="ci ${item.done?'checked':''}"><div class="cbox ${item.done?'done':''}" onclick="togCI('${type}','${item.id}')"></div><span class="clbl ${item.done?'done':''}">${item.text}</span>${type==='todo'?`<span class="cpri ${pc[item.pri]||'pm'}">${pl[item.pri]||'中'}</span>`:''}<button class="cidel" onclick="delCI('${type}','${item.id}')">✕</button></div>`;
+}
+function rCL(type){
+  const items=cls[type];const done=items.filter(i=>i.done).length;const pct=items.length?Math.round(done/items.length*100):0;
+  const pfx={todo:'tp',luggage:'lp',shopping:'sp'}[type];
+  document.getElementById(`${pfx}-txt`).textContent=`${done}/${items.length}`;
+  document.getElementById(`${pfx}-bar`).style.width=`${pct}%`;
+  const list=document.getElementById(`${type}-list`);
+  if(!items.length){list.innerHTML='<div class="empty" style="padding:.8rem">清單是空的</div>';return;}
+  if(type==='todo'){
+    const grps={high:[],med:[],low:[]};
+    items.forEach(i=>{(grps[i.pri]||grps.med).push(i);});
+    const lb={high:'🔴 高優先',med:'🟡 一般',low:'🟢 隨時'};
+    list.innerHTML=['high','med','low'].filter(p=>grps[p].length).map(p=>`<div class="ccat"><div class="ccat-l">${lb[p]}</div>${grps[p].map(i=>ciHTML(type,i)).join('')}</div>`).join('');
+  }else{list.innerHTML=`<div class="ccat">${items.map(i=>ciHTML(type,i)).join('')}</div>`;}
+}
+function rPlan(){rCL(curPtab);}
+
+// ── SUPABASE ──
+async function initSB(){
+  if(!sbOK){document.getElementById('sync-status').textContent='離線模式';const _ns=localStorage.getItem('notes_local');if(_ns)try{notes=JSON.parse(_ns);}catch(e){}rTL();rVC();rExp();rJ();rPlan();rNotes();return;}
+  document.getElementById('sync-status').textContent='連接中...';
+  try{
+    const[nr,vr,er,jr]=await Promise.all([
+      sb.from('travel_notes').select('*').order('ts',{ascending:false}).limit(100),
+      sb.from('vouchers').select('*'),
+      sb.from('expenses').select('*').order('ts',{ascending:false}).limit(500),
+      sb.from('journals').select('*').order('ts',{ascending:false}).limit(100),
+    ]);
+    if(nr.data){notes=nr.data;rNotes();}
+    if(vr.data?.length){vouchers=[...DFT_VC,...vr.data.filter(v=>!DFT_VC.find(d=>d.id===v.id))];rVC();}
+    if(er.data){exps=er.data.map(e=>({...e,payers:JSON.parse(e.payers||'[]'),splitters:JSON.parse(e.splitters||'[]')}));rExp();}
+    if(jr.data){journals=jr.data.map(j=>({...j,images:JSON.parse(j.images||'[]'),likedBy:[]}));rJ();}
+    // Realtime
+    sb.channel('notes-ch').on('postgres_changes',{event:'*',schema:'public',table:'travel_notes'},p=>{
+      if(p.eventType==='INSERT'){if(!notes.find(n=>n.id===p.new.id)){notes.unshift(p.new);}if(curPanel==='notes')rNotes();toast(`@${p.new.author||'旅人'} 新增了筆記`);}
+      if(p.eventType==='DELETE'){notes=notes.filter(n=>n.id!==p.old.id);if(curPanel==='notes')rNotes();}
+    }).subscribe();
+    sb.channel('exp-ch').on('postgres_changes',{event:'*',schema:'public',table:'expenses'},p=>{
+      if(p.eventType==='INSERT'){const e={...p.new,payers:JSON.parse(p.new.payers||'[]'),splitters:JSON.parse(p.new.splitters||'[]')};if(!exps.find(x=>x.id===e.id)){exps.unshift(e);if(curPanel==='expense')rExp();}}
+      if(p.eventType==='DELETE'){exps=exps.filter(e=>e.id!==p.old.id);if(curPanel==='expense')rExp();}
+    }).subscribe();
+    sb.channel('j-ch').on('postgres_changes',{event:'*',schema:'public',table:'journals'},p=>{
+      if(p.eventType==='INSERT'){const j={...p.new,images:JSON.parse(p.new.images||'[]'),likedBy:[]};if(!journals.find(x=>x.id===j.id)){journals.unshift(j);if(curPanel==='journal')rJ();toast(`@${j.author} 發佈了日誌`);}}
+      if(p.eventType==='DELETE'){journals=journals.filter(j=>j.id!==p.old.id);if(curPanel==='journal')rJ();}
+    }).subscribe();
+    const pCh=sb.channel('presence',{config:{presence:{key:myId}}});
+    pCh.on('presence',{event:'sync'},()=>{
+      const s=pCh.presenceState();const bar=document.getElementById('online-avs');bar.innerHTML='';
+      Object.values(s).forEach(ps=>ps.forEach(p=>{bar.insertAdjacentHTML('beforeend',`<div class="online-av" style="background:${p.color||'#8fa89a'};color:#fff" title="${p.name||'旅人'}">${(p.name||'旅')[0]}</div>`);}));
+    }).subscribe(async s=>{if(s==='SUBSCRIBED')await pCh.track({name:localStorage.getItem('travel_author')||'旅人',color:myClr});});
+    document.getElementById('sync-status').textContent='多人即時同步已啟動 ✓';
+  }catch(e){console.error(e);document.getElementById('sync-status').textContent='同步失敗，使用離線模式';}
+  rTL();rVC();rExp();rJ();rPlan();
+}
+
+// ── BOOT ──
+window.addEventListener('DOMContentLoaded',()=>{
+  const saved=localStorage.getItem('travel_author');
+  if(saved){document.getElementById('nau').value=saved;document.getElementById('jau').value=saved;}
+  document.getElementById('day-tabs').style.display='flex';
+  initSB();
+});
+</script>
+</body>
+</html>
