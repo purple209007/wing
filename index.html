@@ -498,7 +498,7 @@ const SUPABASE_URL='https://fexytibsuclpuibspyjv.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZleHl0aWJzdWNscHVpYnNweWp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NDU4NDQsImV4cCI6MjA5MjMyMTg0NH0.gzAlJOB_epRAwvI3umuxl-DEUXC4qMpR1kjsAgUlz_E';
 const {createClient}=supabase;
 let sb=null,sbOK=false;
-try{if(SUPABASE_URL!=='xxx'&&SUPABASE_KEY!=='xxx'){sb=createClient(SUPABASE_URL,SUPABASE_KEY);sbOK=true;}}catch(e){}
+try{if(SUPABASE_URL!=='xxx'&&SUPABASE_KEY!=='xxx'){sb=createClient(SUPABASE_URL,SUPABASE_KEY);sbOK=true;console.log('✅ Supabase client created');}else{console.warn('❌ Supabase keys are xxx - offline mode');}}catch(e){console.error('❌ Supabase init error:',e);}
 
 // ── SCHEDULE DATA ──
 const SCH={
@@ -682,7 +682,7 @@ async function submitNote(){
 }
 function saveNotesLocal(){try{localStorage.setItem('notes_local',JSON.stringify(notes));}catch(e){}}
 async function pushNote(n){
-  if(sbOK)try{await sb.from('travel_notes').insert([{...n}]);}catch(e){}
+  if(sbOK)try{await sb.from('travel_notes').insert([{...n}]);console.log('✅ note saved to Supabase');}catch(e){console.error('❌ note insert failed:',e);}
   if(!notes.find(x=>x.id===n.id)){notes.unshift(n);}
   saveNotesLocal();rNotes();
 }
@@ -707,7 +707,7 @@ async function addExp(){
   const cny=tCNY(amtR,expCur);
   const e={id:Date.now().toString(),desc,cat,amount:amtR,currency:expCur,cny,payers:[...expPay],splitters:[...expSpl],day:curDay,ts:Date.now()};
   exps.unshift(e);
-  if(sbOK)try{await sb.from('expenses').insert([{...e,payers:JSON.stringify(e.payers),splitters:JSON.stringify(e.splitters)}]);}catch(err){}
+  if(sbOK)try{await sb.from('expenses').insert([{...e,payers:JSON.stringify(e.payers),splitters:JSON.stringify(e.splitters)}]);console.log('✅ expense saved to Supabase');}catch(err){console.error('❌ expense insert failed:',err);}
   document.getElementById('ea').value='';document.getElementById('ed').value='';
   toast('記帳成功 ✓');rExp();
 }
@@ -856,7 +856,11 @@ async function initSB(){
       sb.from('expenses').select('*').order('ts',{ascending:false}).limit(500),
       sb.from('journals').select('*').order('ts',{ascending:false}).limit(100),
     ]);
-    if(nr.data){notes=nr.data;rNotes();}
+    // 備注：若 Supabase 載入失敗，從 localStorage 補救
+    if(nr.error){console.warn('⚠️ notes fetch error:',nr.error);const _ns=localStorage.getItem('notes_local');if(_ns)try{notes=JSON.parse(_ns);}catch(e){}
+    }else if(nr.data&&nr.data.length>0){notes=nr.data;saveNotesLocal();}
+    else{const _ns=localStorage.getItem('notes_local');if(_ns)try{const local=JSON.parse(_ns);if(local.length>0)notes=local;}catch(e){}}
+    rNotes();
     if(vr.data?.length){vouchers=[...DFT_VC,...vr.data.filter(v=>!DFT_VC.find(d=>d.id===v.id))];rVC();}
     if(er.data){exps=er.data.map(e=>({...e,payers:JSON.parse(e.payers||'[]'),splitters:JSON.parse(e.splitters||'[]')}));rExp();}
     if(jr.data){journals=jr.data.map(j=>({...j,images:JSON.parse(j.images||'[]'),likedBy:[]}));rJ();}
