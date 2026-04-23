@@ -570,7 +570,7 @@ const FX={CNY:1,TWD:4.5,USD:0.138};
 
 // ── STATE ──
 let curDay='5/4',curPanel='timeline',curPtab='todo';
-let notes=[],vouchers=[...DFT_VC],exps=[],journals=[];
+let notes=[],vouchers=[...DFT_VC],exps=[],journals=[],itemNotes={};
 let cls={
   todo:JSON.parse(localStorage.getItem('cl_todo')||'null')||[...DFT_TODO],
   luggage:JSON.parse(localStorage.getItem('cl_luggage')||'null')||[...DFT_LUG],
@@ -614,7 +614,7 @@ function rTL(){
   items.forEach((item,i)=>{
     const d=document.createElement('div');
     d.className='tl-item';d.style.animationDelay=`${i*.05}s`;
-    const savedNote=localStorage.getItem(`unote_${curDay}_${i}`)||'';
+    const savedNote=itemNotes[`${curDay}_${i}`]||localStorage.getItem(`unote_${curDay}_${i}`)||'';
     const unoteHtml=savedNote?`<div class="unote"><div class="unote-hdr">✏️ 我的備注</div>${savedNote}</div>`:'';
     d.innerHTML=`<div class="tl-time"><span class="tl-t">${item.time}</span></div>
     <div class="tl-dot ${dotC[item.type]||'ts'}"></div>
@@ -637,15 +637,20 @@ function rTL(){
   });
 }
 function togIN(i){document.getElementById(`in-${i}`).classList.toggle('open')}
-function saveIN(i,title){
+async function saveIN(i,title){
   const t=document.getElementById(`inta-${i}`).value.trim();
-  // 儲存到 localStorage，讓備注顯示在卡片上
+  const au=localStorage.getItem('travel_author')||'旅人';
+  const key=`${curDay}_${i}`;
+  // 更新本機快取
+  itemNotes[key]=t;
   localStorage.setItem(`unote_${curDay}_${i}`,t);
+  // 存到 Supabase（upsert）
+  if(sbOK)try{
+    await sb.from('item_notes').upsert([{id:key,day:curDay,item_index:i,text:t,author:au,ts:Date.now()}],{onConflict:'day,item_index'});
+  }catch(e){console.warn('item_note save fail:',e);}
   // 同時推到共筆
-  if(t){const au=localStorage.getItem('travel_author')||'旅人';
-    pushNote({text:`[${title}] ${t}`,author:au,day:curDay,ts:Date.now(),id:Date.now().toString()});}
+  if(t){pushNote({text:`[${title}] ${t}`,author:au,day:curDay,ts:Date.now(),id:Date.now().toString()});}
   document.getElementById(`in-${i}`).classList.remove('open');
-  // 立即更新卡片顯示
   rTL();
   toast(t?'備注已儲存 ✓':'備注已清除');
 }
@@ -860,12 +865,16 @@ async function initSB(){
   if(!sbOK){document.getElementById('sync-status').textContent='離線模式';const _ns=localStorage.getItem('notes_local');if(_ns)try{notes=JSON.parse(_ns);}catch(e){}rTL();rVC();rExp();rJ();rPlan();rNotes();return;}
   document.getElementById('sync-status').textContent='連接中...';
   try{
-    const[nr,vr,er,jr]=await Promise.all([
+    const[nr,vr,er,jr,inr]=await Promise.all([
       sb.from('travel_notes').select('*').order('ts',{ascending:false}).limit(100),
       sb.from('vouchers').select('*'),
       sb.from('expenses').select('*').order('ts',{ascending:false}).limit(500),
       sb.from('journals').select('*').order('ts',{ascending:false}).limit(100),
+      sb.from('item_notes').select('*'),
     ]);
+    // 行程卡片備注
+    if(inr.data){inr.data.forEach(n=>{itemNotes[`${n.day}_${n.item_index}`]=n.text||'';});}
+
     // 備注：若 Supabase 載入失敗，從 localStorage 補救
     if(nr.error){console.warn('⚠️ notes fetch error:',nr.error);const _ns=localStorage.getItem('notes_local');if(_ns)try{notes=JSON.parse(_ns);}catch(e){}
     }else if(nr.data&&nr.data.length>0){notes=nr.data;saveNotesLocal();}
