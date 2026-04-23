@@ -257,9 +257,37 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .sel-s{padding:7px 10px;border:1px solid var(--sand);border-radius:6px;font-family:'DM Mono',monospace;font-size:.7rem;color:var(--ink);background:var(--paper);outline:none}
 .inp-s{width:100%;padding:7px 10px;border:1px solid var(--sand);border-radius:6px;font-family:'Noto Serif TC',serif;font-size:.78rem;color:var(--ink);background:var(--paper);outline:none}
 .inp-s:focus,.sel-s:focus{border-color:var(--clay)}
+/* ── LOGIN MODAL ── */
+#login-overlay{position:fixed;inset:0;background:rgba(26,22,18,.7);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1.5rem}
+.login-box{background:var(--white);border-radius:18px;padding:2rem 1.8rem 1.6rem;max-width:340px;width:100%;box-shadow:0 12px 48px rgba(26,22,18,.25);text-align:center}
+.login-logo{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;color:var(--ink);margin-bottom:.3rem}
+.login-sub{font-size:.72rem;color:var(--mist);margin-bottom:1.6rem;font-family:'DM Mono',monospace}
+.btn-google{display:flex;align-items:center;justify-content:center;gap:.7rem;width:100%;padding:.85rem;border:1.5px solid var(--sand);border-radius:10px;background:var(--white);cursor:pointer;font-family:'Noto Serif TC',serif;font-size:.88rem;font-weight:700;color:var(--ink);transition:all .2s;margin-bottom:.85rem}
+.btn-google:hover{background:var(--paper);border-color:var(--clay)}
+.btn-guest{width:100%;padding:.65rem;border:none;background:transparent;cursor:pointer;font-size:.75rem;color:var(--mist);text-decoration:underline;font-family:'Noto Serif TC',serif}
+.btn-guest:hover{color:var(--ink)}
+.login-err{font-size:.72rem;color:var(--red);margin-top:.6rem;min-height:1rem}
+.user-chip{display:inline-flex;align-items:center;gap:.5rem;background:var(--paper);border-radius:20px;padding:.3rem .75rem .3rem .3rem;cursor:pointer;border:1px solid var(--sand);margin-top:.5rem}
+.user-av{width:26px;height:26px;border-radius:50%;object-fit:cover;background:var(--sage);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.75rem;font-weight:700;flex-shrink:0;overflow:hidden}
+.user-av img{width:100%;height:100%;object-fit:cover}
+.user-name{font-size:.7rem;font-family:'DM Mono',monospace;color:var(--ink);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 </head>
 <body>
+
+<!-- LOGIN MODAL -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">廈門慢旅</div>
+    <div class="login-sub">May 2026 · 高雄出發四天三夜</div>
+    <button class="btn-google" onclick="loginGoogle()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+      使用 Google 登入
+    </button>
+    <button class="btn-guest" onclick="loginGuest()">不登入，以旅客身份繼續</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
 
 <div class="header">
   <div class="header-bg"></div>
@@ -267,7 +295,10 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     <div class="trip-badge">廈門 · 南靖 · 鼓浪嶼</div>
     <h1 class="trip-title">廈門慢旅<br><i style="font-weight:400;font-size:1.3rem">May 2026</i></h1>
     <p class="trip-sub">高雄出發 · 四天三夜 · 5/4–5/7</p>
-    <div class="live-badge"><span class="live-dot"></span><span id="sync-status">連接中...</span></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:.4rem">
+      <div class="live-badge"><span class="live-dot"></span><span id="sync-status">連接中...</span></div>
+      <div id="user-chip-wrap"></div>
+    </div>
   </div>
 </div>
 
@@ -650,11 +681,12 @@ async function submitNote(){
 }
 function saveNotesLocal(){try{localStorage.setItem('notes_local',JSON.stringify(notes));}catch(e){}}
 async function pushNote(n){
-  if(sbOK)try{await sb.from('travel_notes').insert([{...n}]);return;}catch(e){}
-  notes.unshift(n);saveNotesLocal();rNotes();
+  if(sbOK)try{await sb.from('travel_notes').insert([{...n}]);}catch(e){}
+  if(!notes.find(x=>x.id===n.id)){notes.unshift(n);}
+  saveNotesLocal();rNotes();
 }
 async function delNote(id){
-  if(sbOK)try{await sb.from('travel_notes').delete().eq('id',id);return;}catch(e){}
+  if(sbOK)try{await sb.from('travel_notes').delete().eq('id',id);}catch(e){}
   notes=notes.filter(n=>n.id!==id);saveNotesLocal();rNotes();
 }
 function rNotes(){
@@ -850,13 +882,117 @@ async function initSB(){
   rTL();rVC();rExp();rJ();rPlan();
 }
 
+// ── AUTH ──
+let currentUser=null;
+
+function showLoginErr(msg){const el=document.getElementById('login-err');if(el)el.textContent=msg;}
+
+async function loginGoogle(){
+  showLoginErr('');
+  if(!sbOK){showLoginErr('目前離線，請以旅客身份繼續');return;}
+  try{
+    const {error}=await sb.auth.signInWithOAuth({
+      provider:'google',
+      options:{redirectTo:window.location.href}
+    });
+    if(error)throw error;
+  }catch(e){
+    console.error('Google登入失敗',e);
+    showLoginErr('Google 登入失敗，請以旅客身份繼續或稍後再試');
+  }
+}
+
+function loginGuest(){
+  const name='旅客';
+  setUser({name,avatar:null,isGuest:true});
+  hideLoginOverlay();
+}
+
+function setUser(u){
+  currentUser=u;
+  localStorage.setItem('travel_author',u.name);
+  document.getElementById('nau').value=u.name;
+  document.getElementById('jau').value=u.name;
+  renderUserChip(u);
+}
+
+function renderUserChip(u){
+  const wrap=document.getElementById('user-chip-wrap');
+  if(!wrap)return;
+  const avHtml=u.avatar
+    ?`<div class="user-av"><img src="${u.avatar}" referrerpolicy="no-referrer"></div>`
+    :`<div class="user-av">${u.name[0]||'旅'}</div>`;
+  wrap.innerHTML=`<div class="user-chip" onclick="confirmLogout()" title="點擊登出">
+    ${avHtml}<span class="user-name">${u.name}</span>
+  </div>`;
+}
+
+function confirmLogout(){
+  if(confirm('確定要登出嗎？'))logoutUser();
+}
+
+async function logoutUser(){
+  if(sbOK&&!currentUser?.isGuest)try{await sb.auth.signOut();}catch(e){}
+  currentUser=null;
+  localStorage.removeItem('travel_author');
+  document.getElementById('user-chip-wrap').innerHTML='';
+  document.getElementById('login-overlay').style.display='flex';
+}
+
+function hideLoginOverlay(){
+  const ov=document.getElementById('login-overlay');
+  if(ov)ov.style.display='none';
+}
+
 // ── BOOT ──
-window.addEventListener('DOMContentLoaded',()=>{
-  const saved=localStorage.getItem('travel_author');
-  if(saved){document.getElementById('nau').value=saved;document.getElementById('jau').value=saved;}
+window.addEventListener('DOMContentLoaded',async()=>{
   document.getElementById('day-tabs').style.display='flex';
   initSB();
+
+  if(!sbOK){
+    // 離線：直接以旅客或上次儲存的名稱進入
+    const saved=localStorage.getItem('travel_author');
+    setUser({name:saved||'旅客',avatar:null,isGuest:true});
+    hideLoginOverlay();
+    return;
+  }
+
+  // 檢查是否有 OAuth 回調 session
+  try{
+    const {data:{session},error}=await sb.auth.getSession();
+    if(session?.user){
+      const u=session.user;
+      const name=u.user_metadata?.full_name||u.user_metadata?.name||u.email?.split('@')[0]||'旅人';
+      const avatar=u.user_metadata?.avatar_url||u.user_metadata?.picture||null;
+      setUser({name,avatar,isGuest:false});
+      hideLoginOverlay();
+      return;
+    }
+  }catch(e){console.warn('session check fail',e);}
+
+  // 監聽 auth 狀態變化（處理 OAuth redirect）
+  sb.auth.onAuthStateChange((event,session)=>{
+    if(event==='SIGNED_IN'&&session?.user){
+      const u=session.user;
+      const name=u.user_metadata?.full_name||u.user_metadata?.name||u.email?.split('@')[0]||'旅人';
+      const avatar=u.user_metadata?.avatar_url||u.user_metadata?.picture||null;
+      setUser({name,avatar,isGuest:false});
+      hideLoginOverlay();
+    }
+    if(event==='SIGNED_OUT'){
+      document.getElementById('login-overlay').style.display='flex';
+    }
+  });
+
+  // 有上次記錄的名稱，先讓使用者選擇是否繼續
+  const saved=localStorage.getItem('travel_author');
+  if(saved&&saved!=='旅客'){
+    setUser({name:saved,avatar:null,isGuest:true});
+    hideLoginOverlay();
+  }
+  // 否則顯示登入畫面
 });
+
 </script>
 </body>
 </html>
