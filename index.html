@@ -257,6 +257,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .sel-s{padding:7px 10px;border:1px solid var(--sand);border-radius:6px;font-family:'DM Mono',monospace;font-size:.7rem;color:var(--ink);background:var(--paper);outline:none}
 .inp-s{width:100%;padding:7px 10px;border:1px solid var(--sand);border-radius:6px;font-family:'Noto Serif TC',serif;font-size:.78rem;color:var(--ink);background:var(--paper);outline:none}
 .inp-s:focus,.sel-s:focus{border-color:var(--clay)}
+.unote{margin:0 .85rem .65rem;padding:.45rem .65rem;background:#fffbe8;border-left:2px solid var(--gold);border-radius:0 4px 4px 0;font-size:.7rem;color:var(--ink);line-height:1.6;white-space:pre-wrap}
+.unote-hdr{font-size:.6rem;color:var(--gold);font-weight:700;font-family:'DM Mono',monospace;margin-bottom:2px}
 /* ── LOGIN MODAL ── */
 #login-overlay{position:fixed;inset:0;background:rgba(26,22,18,.7);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1.5rem}
 .login-box{background:var(--white);border-radius:18px;padding:2rem 1.8rem 1.6rem;max-width:340px;width:100%;box-shadow:0 12px 48px rgba(26,22,18,.25);text-align:center}
@@ -612,19 +614,22 @@ function rTL(){
   items.forEach((item,i)=>{
     const d=document.createElement('div');
     d.className='tl-item';d.style.animationDelay=`${i*.05}s`;
+    const savedNote=localStorage.getItem(`unote_${curDay}_${i}`)||'';
+    const unoteHtml=savedNote?`<div class="unote"><div class="unote-hdr">✏️ 我的備注</div>${savedNote}</div>`:'';
     d.innerHTML=`<div class="tl-time"><span class="tl-t">${item.time}</span></div>
     <div class="tl-dot ${dotC[item.type]||'ts'}"></div>
     <div class="tl-card">
       <div class="ch"><span class="ct">${item.title}</span><span class="tbadge ${bc[item.type]||'bs'}">${bl[item.type]||item.type}</span></div>
       <div class="cl"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg><a href="${mUrl(item.mq)}" target="_blank">${item.loc} ↗</a></div>
       ${item.note?`<div class="cnote">${item.note}</div>`:''}
+      ${unoteHtml}
       <div class="cactions">
         <a href="${mUrl(item.mq)}" target="_blank" class="abtn am">地圖</a>
         <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(item.mq)}" target="_blank" class="abtn am">導航</a>
         <button class="abtn an" onclick="togIN(${i})">📝 備注</button>
       </div>
       <div class="inw" id="in-${i}">
-        <textarea class="ini" id="inta-${i}" placeholder="加備注..."></textarea>
+        <textarea class="ini" id="inta-${i}" placeholder="加備注...">${savedNote}</textarea>
         <button class="ins" onclick="saveIN(${i},'${item.title.replace(/'/g,"\\'")}')">儲存</button>
       </div>
     </div>`;
@@ -633,11 +638,16 @@ function rTL(){
 }
 function togIN(i){document.getElementById(`in-${i}`).classList.toggle('open')}
 function saveIN(i,title){
-  const t=document.getElementById(`inta-${i}`).value.trim();if(!t)return;
-  const au=localStorage.getItem('travel_author')||'旅人';
-  pushNote({text:`[${title}] ${t}`,author:au,day:curDay,ts:Date.now(),id:Date.now().toString()});
-  document.getElementById(`inta-${i}`).value='';document.getElementById(`in-${i}`).classList.remove('open');
-  toast('備注已送出 ✓');
+  const t=document.getElementById(`inta-${i}`).value.trim();
+  // 儲存到 localStorage，讓備注顯示在卡片上
+  localStorage.setItem(`unote_${curDay}_${i}`,t);
+  // 同時推到共筆
+  if(t){const au=localStorage.getItem('travel_author')||'旅人';
+    pushNote({text:`[${title}] ${t}`,author:au,day:curDay,ts:Date.now(),id:Date.now().toString()});}
+  document.getElementById(`in-${i}`).classList.remove('open');
+  // 立即更新卡片顯示
+  rTL();
+  toast(t?'備注已儲存 ✓':'備注已清除');
 }
 
 // ── MAP ──
