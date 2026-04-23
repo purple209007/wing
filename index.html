@@ -280,11 +280,12 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
   <div class="login-box">
     <div class="login-logo">廈門慢旅</div>
     <div class="login-sub">May 2026 · 高雄出發四天三夜</div>
-    <button class="btn-google" onclick="loginGoogle()">
-      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
-      使用 Google 登入
-    </button>
-    <button class="btn-guest" onclick="loginGuest()">不登入，以旅客身份繼續</button>
+    <div style="text-align:left;margin-bottom:1.2rem">
+      <label style="font-size:.78rem;color:var(--mist);font-family:'DM Mono',monospace;display:block;margin-bottom:.5rem">你的名字</label>
+      <input id="login-name-inp" class="inp-s" placeholder="輸入你的暱稱..." maxlength="12" style="font-size:.95rem;padding:.7rem .9rem" oninput="document.getElementById('login-err').textContent=''">
+    </div>
+    <button class="btn-google" onclick="loginWithName()" style="justify-content:center">進入旅遊日誌 ✈️</button>
+    <button class="btn-guest" onclick="loginGuest()">直接以「旅客」身份進入</button>
     <div class="login-err" id="login-err"></div>
   </div>
 </div>
@@ -887,111 +888,68 @@ let currentUser=null;
 
 function showLoginErr(msg){const el=document.getElementById('login-err');if(el)el.textContent=msg;}
 
-async function loginGoogle(){
-  showLoginErr('');
-  if(!sbOK){showLoginErr('目前離線，請以旅客身份繼續');return;}
-  try{
-    const {error}=await sb.auth.signInWithOAuth({
-      provider:'google',
-      options:{redirectTo:window.location.href}
-    });
-    if(error)throw error;
-  }catch(e){
-    console.error('Google登入失敗',e);
-    showLoginErr('Google 登入失敗，請以旅客身份繼續或稍後再試');
-  }
+function loginWithName(){
+  const inp=document.getElementById('login-name-inp');
+  const name=(inp?.value||'').trim();
+  if(!name){showLoginErr('請輸入你的暱稱');inp?.focus();return;}
+  setUser({name,avatar:null,isGuest:false});
+  hideLoginOverlay();
 }
 
 function loginGuest(){
-  const name='旅客';
-  setUser({name,avatar:null,isGuest:true});
+  setUser({name:'旅客',avatar:null,isGuest:true});
   hideLoginOverlay();
 }
 
 function setUser(u){
   currentUser=u;
   localStorage.setItem('travel_author',u.name);
-  document.getElementById('nau').value=u.name;
-  document.getElementById('jau').value=u.name;
+  const nau=document.getElementById('nau');if(nau)nau.value=u.name;
+  const jau=document.getElementById('jau');if(jau)jau.value=u.name;
   renderUserChip(u);
 }
 
 function renderUserChip(u){
-  const wrap=document.getElementById('user-chip-wrap');
-  if(!wrap)return;
-  const avHtml=u.avatar
-    ?`<div class="user-av"><img src="${u.avatar}" referrerpolicy="no-referrer"></div>`
-    :`<div class="user-av">${u.name[0]||'旅'}</div>`;
-  wrap.innerHTML=`<div class="user-chip" onclick="confirmLogout()" title="點擊登出">
-    ${avHtml}<span class="user-name">${u.name}</span>
+  const wrap=document.getElementById('user-chip-wrap');if(!wrap)return;
+  wrap.innerHTML=`<div class="user-chip" onclick="confirmLogout()" title="點擊切換名稱">
+    <div class="user-av">${u.name[0]||'旅'}</div>
+    <span class="user-name">${u.name}</span>
   </div>`;
 }
 
 function confirmLogout(){
-  if(confirm('確定要登出嗎？'))logoutUser();
-}
-
-async function logoutUser(){
-  if(sbOK&&!currentUser?.isGuest)try{await sb.auth.signOut();}catch(e){}
-  currentUser=null;
-  localStorage.removeItem('travel_author');
-  document.getElementById('user-chip-wrap').innerHTML='';
-  document.getElementById('login-overlay').style.display='flex';
+  if(confirm('切換使用者名稱？')){
+    currentUser=null;
+    localStorage.removeItem('travel_author');
+    document.getElementById('user-chip-wrap').innerHTML='';
+    const inp=document.getElementById('login-name-inp');
+    if(inp)inp.value='';
+    document.getElementById('login-overlay').style.display='flex';
+    setTimeout(()=>document.getElementById('login-name-inp')?.focus(),100);
+  }
 }
 
 function hideLoginOverlay(){
-  const ov=document.getElementById('login-overlay');
-  if(ov)ov.style.display='none';
+  const ov=document.getElementById('login-overlay');if(ov)ov.style.display='none';
 }
 
 // ── BOOT ──
-window.addEventListener('DOMContentLoaded',async()=>{
+window.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('day-tabs').style.display='flex';
   initSB();
 
-  if(!sbOK){
-    // 離線：直接以旅客或上次儲存的名稱進入
-    const saved=localStorage.getItem('travel_author');
-    setUser({name:saved||'旅客',avatar:null,isGuest:true});
-    hideLoginOverlay();
-    return;
-  }
+  // Enter 鍵送出
+  document.getElementById('login-name-inp')?.addEventListener('keydown',e=>{if(e.key==='Enter')loginWithName();});
 
-  // 檢查是否有 OAuth 回調 session
-  try{
-    const {data:{session},error}=await sb.auth.getSession();
-    if(session?.user){
-      const u=session.user;
-      const name=u.user_metadata?.full_name||u.user_metadata?.name||u.email?.split('@')[0]||'旅人';
-      const avatar=u.user_metadata?.avatar_url||u.user_metadata?.picture||null;
-      setUser({name,avatar,isGuest:false});
-      hideLoginOverlay();
-      return;
-    }
-  }catch(e){console.warn('session check fail',e);}
-
-  // 監聽 auth 狀態變化（處理 OAuth redirect）
-  sb.auth.onAuthStateChange((event,session)=>{
-    if(event==='SIGNED_IN'&&session?.user){
-      const u=session.user;
-      const name=u.user_metadata?.full_name||u.user_metadata?.name||u.email?.split('@')[0]||'旅人';
-      const avatar=u.user_metadata?.avatar_url||u.user_metadata?.picture||null;
-      setUser({name,avatar,isGuest:false});
-      hideLoginOverlay();
-    }
-    if(event==='SIGNED_OUT'){
-      document.getElementById('login-overlay').style.display='flex';
-    }
-  });
-
-  // 有上次記錄的名稱，先讓使用者選擇是否繼續
   const saved=localStorage.getItem('travel_author');
-  if(saved&&saved!=='旅客'){
-    setUser({name:saved,avatar:null,isGuest:true});
+  if(saved){
+    setUser({name:saved,avatar:null,isGuest:saved==='旅客'});
     hideLoginOverlay();
+  } else {
+    setTimeout(()=>document.getElementById('login-name-inp')?.focus(),300);
   }
-  // 否則顯示登入畫面
 });
+
 
 </script>
 </body>
