@@ -777,7 +777,8 @@ function rExp(){
   });
   document.getElementById('esplit-list').innerHTML=members.map(m=>{
     const net=(netPaid[m]||0)-(netOwe[m]||0);const col=net>=0?'var(--sage)':'var(--red)';
-    return`<div class="esplit-r"><span class="esplit-n">${m}</span><span style="font-family:'DM Mono',monospace;font-size:.7rem;color:${col}">${net>=0?'+':''}¥${net.toFixed(1)}</span></div>`;
+    const netTWD=Math.round(net*FX.TWD);
+    return`<div class="esplit-r"><span class="esplit-n">${m}</span><span style="font-family:'DM Mono',monospace;font-size:.7rem;color:${col}">${net>=0?'+':''}NT$${netTWD}<span style="font-size:.6rem;opacity:.6"> (¥${net.toFixed(1)})</span></span></div>`;
   }).join('');
   const el=document.getElementById('elist');
   if(!fil.length){el.innerHTML='<div class="empty">沒有符合的記帳</div>';return;}
