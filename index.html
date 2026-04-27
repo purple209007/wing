@@ -328,11 +328,12 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     <div class="route-sum">
       <div class="sec-ttl" style="margin-bottom:0">路線摘要</div>
       <div class="route-stops" id="route-stops"></div>
-      <a id="route-btn" href="#" target="_blank" class="route-btn">📍 Google Maps 開啟完整路線</a>
+      <a id="route-btn" href="#" target="_blank" class="route-btn">📍 高德地圖開啟完整路線</a>
     </div>
     <div class="map-wrap">
       <div class="map-hdr"><span class="map-ttl">📌 當日景點</span><a id="dir-link" href="#" target="_blank" style="font-family:'DM Mono',monospace;font-size:.56rem;color:var(--sage)">導航 →</a></div>
-      <iframe id="map-fr" class="map-fr" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <iframe id="map-fr" class="map-fr" style="display:none" allowfullscreen loading="lazy"></iframe>
+      <div id="map-amap-btn" style="margin:.5rem .85rem;display:flex;gap:.5rem;flex-wrap:wrap"></div>
       <div class="map-locs" id="map-locs"></div>
     </div>
   </div>
@@ -408,6 +409,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
         <button class="epchip" onclick="togPayer('馬',this)">馬</button>
         <button class="epchip" onclick="togPayer('郁婷',this)">郁婷</button>
         <button class="epchip" onclick="togPayer('婕',this)">婕</button>
+        <button class="epchip" onclick="togPayer('賴媽',this)">賴媽</button>
       </div>
       <div style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--mist);margin-top:.45rem;margin-bottom:.3rem">分攤對象</div>
       <div class="epchips" id="esp">
@@ -415,6 +417,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
         <button class="epchip sel" onclick="togSplit('馬',this)">馬</button>
         <button class="epchip sel" onclick="togSplit('郁婷',this)">郁婷</button>
         <button class="epchip sel" onclick="togSplit('婕',this)">婕</button>
+        <button class="epchip sel" onclick="togSplit('賴媽',this)">賴媽</button>
       </div>
       <div class="esrow">
         <button class="esbtn" onclick="addExp()">記帳</button>
@@ -576,12 +579,12 @@ let cls={
   luggage:JSON.parse(localStorage.getItem('cl_luggage')||'null')||[...DFT_LUG],
   shopping:JSON.parse(localStorage.getItem('cl_shopping')||'null')||[...DFT_SHOP],
 };
-let expCur='CNY',expPay=['香'],expSpl=['香','馬','郁婷','婕'],expF='all';
+let expCur='CNY',expPay=['香'],expSpl=['香','馬','郁婷','婕','賴媽'],expF='all';
 let jImgs=[],myId=Math.random().toString(36).slice(2,8),myClr=`hsl(${Math.floor(Math.random()*320)},42%,52%)`;
 
 // ── UTILS ──
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
-function mUrl(q){return`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`}
+function mUrl(q){return`https://www.amap.com/search?query=${encodeURIComponent(q)}`}
 function fmtT(ts){const d=new Date(ts);return`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`}
 function tCNY(a,c){return a/FX[c]}
 function toTWD(c){return Math.round(c*FX.TWD)}
@@ -625,7 +628,7 @@ function rTL(){
       ${unoteHtml}
       <div class="cactions">
         <a href="${mUrl(item.mq)}" target="_blank" class="abtn am">地圖</a>
-        <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(item.mq)}" target="_blank" class="abtn am">導航</a>
+        <a href="https://uri.amap.com/navigation?to=${encodeURIComponent(item.mq)}&src=myapp&callnative=0" target="_blank" class="abtn am">導航</a>
         <button class="abtn an" onclick="togIN(${i})">📝 備注</button>
       </div>
       <div class="inw" id="in-${i}">
@@ -660,9 +663,9 @@ function rMap(){
   const items=SCH[curDay]||[];
   const sights=items.filter(i=>i.type==='sight'||i.type==='food');
   const ctr={'5/4':'廈門,中國','5/5':'鼓浪嶼,廈門','5/6':'南靖土樓,福建','5/7':'廈門,中國'}[curDay];
-  document.getElementById('map-fr').src=`https://maps.google.com/maps?q=${encodeURIComponent(ctr)}&t=m&z=13&output=embed&iwloc=near`;
+  document.getElementById('map-amap-btn').innerHTML=`<a href="https://www.amap.com/search?query=${encodeURIComponent(ctr)}" target="_blank" class="route-btn" style="display:inline-block;margin:0">🗺 在高德地圖查看 ${ctr}</a>`;
   const wps=sights.map(i=>encodeURIComponent(i.mq));
-  if(wps.length>=2){const u=`https://www.google.com/maps/dir/${wps.join('/')}`;document.getElementById('dir-link').href=u;document.getElementById('route-btn').href=u;}
+  if(wps.length>=2){const u=`https://www.amap.com/dir?from=&to=${wps[wps.length-1]}&waypoints=${wps.slice(0,-1).join(',')}&type=car`;document.getElementById('dir-link').href=u;document.getElementById('route-btn').href=`https://www.amap.com/search?query=${encodeURIComponent(ctr)}`;}
   const rs=document.getElementById('route-stops');rs.innerHTML='';
   sights.forEach((item,i)=>{if(i>0)rs.insertAdjacentHTML('beforeend','<span class="rs-arr">→</span>');rs.insertAdjacentHTML('beforeend',`<span class="rs-name">${item.loc}</span>`);});
   const ll=document.getElementById('map-locs');ll.innerHTML='';
@@ -757,7 +760,7 @@ function rExp(){
   document.getElementById('eso').textContent=`¥${Math.max(0,tot-fC-sC).toFixed(0)}`;
   document.getElementById('ebar-f').style.width=`${Math.min(tot/2800*100,100)}%`;
   // Split
-  const members=['香','馬','郁婷','婕'];
+  const members=['香','馬','郁婷','婕','賴媽'];
   const paid={},owe={};members.forEach(m=>{paid[m]=0;owe[m]=0;});
   exps.forEach(e=>{
     const pp=e.cny/(e.payers?.length||1);
